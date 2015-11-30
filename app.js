@@ -3,11 +3,13 @@
 var _ = require('lodash');
 var async = require('async-chainable');
 var colors = require('colors');
+var del = require('del');
 var fs = require('fs');
 var homedir = require('homedir');
 var ini = require('ini');
 var inquirer = require('inquirer');
 var program = require('commander');
+var temp = require('temp');
 var util = require('util');
 
 var home = homedir();
@@ -21,6 +23,7 @@ var version = '0.1.0'; // Version (auto-bump)
 
 program
 	.version(version) // FIXME: Correct with right version via Gulp (can't use require('package.json') as it upsets nexe)
+	.option('--backup', 'Perform a backup')
 	.option('--dump', 'Dump config and exit')
 	.option('--setup', 'Initalize config')
 	.option('-v, --verbose', 'Be verbose')
@@ -107,6 +110,30 @@ if (program.dump) {
 				return process.exit(1);
 			}
 			console.log(colors.green.bold('MindState setup completed!'));
+		});
+	// }}}
+} else if (program.backup) {
+	// `--backup` {{{
+	async()
+		.then('tempDir', function(next) {
+			temp.mkdir({prefix: 'mindstate-'}, next);
+		})
+		.then(function(next) {
+			if (program.verbose) console.log(colors.grey('Using temp directory:', this.tempDir));
+			next();
+		})
+		.end(function(err) {
+			if (this.tempDir) {
+				if (program.verbose) console.log(colors.grey('Cleaning up temp directory', this.tempDir));
+				del.sync(this.tempDir, {force: true});
+			}
+
+			if (err) {
+				console.log(colors.red(err.toString()));
+				return process.exit(1);
+			}
+
+			console.log(colors.green.bold('MindState backup completed!'));
 		});
 	// }}}
 }
