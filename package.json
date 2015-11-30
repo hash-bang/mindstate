@@ -1,0 +1,20 @@
+{
+  "name": "mindstate",
+  "version": "0.0.1",
+  "description": "Server backups with Node",
+  "main": "app.js",
+  "keywords": [
+    "backup"
+  ],
+  "author": "Matt Carter <m@ttcarter.com> (https://github.com/hash-bang)",
+  "license": "MIT",
+  "dependencies": {
+    "async-chainable": "^1.7.15",
+    "colors": "^1.1.2",
+    "commander": "^2.9.0",
+    "homedir": "^0.6.0",
+    "ini": "^1.3.4",
+    "inquirer": "^0.11.0",
+    "lodash": "^3.10.1"
+  }
+}
