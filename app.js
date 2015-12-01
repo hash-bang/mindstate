@@ -47,6 +47,11 @@ var plugins = [ // Array of recognised plugins
 	return (program.plugins && _.contains(program.plugins, plugin.name));
 });
 
+if (!plugins.length) {
+	console.log('No plugins to run!');
+	process.exit(1);
+}
+
 if (program.verbose) console.log('Using plugins:', plugins.map(function(plugin) { return colors.cyan(plugin.name) }).join(', '));
 
 // `config` - saved config (INI ~/.mindstate etc.) {{{
