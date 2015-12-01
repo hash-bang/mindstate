@@ -3,6 +3,7 @@
 var _ = require('lodash');
 var async = require('async-chainable');
 var colors = require('colors');
+var copy = require('copy');
 var del = require('del');
 var fs = require('fs');
 var homedir = require('homedir');
@@ -132,6 +133,7 @@ if (program.dump) {
 } else if (program.backup) {
 	// `--backup` {{{
 	async()
+		// Setup tempDir {{{
 		.then('tempDir', function(next) {
 			temp.mkdir({prefix: 'mindstate-'}, next);
 		})
@@ -139,6 +141,32 @@ if (program.dump) {
 			if (program.verbose) console.log(colors.grey('Using temp directory:', this.tempDir));
 			next();
 		})
+		// }}}
+		
+		// config.locations.dir - additional dir locations to backup {{{
+		.then(function(next) {
+			if (!_.has(config, 'locations.dir') || !config.locations.dir.length) {
+				if (program.verbose) console.log(colors.grey('No additional locations to backup'));
+				return next();
+			}
+
+			async()
+				.set('tempDir', this.tempDir)
+				.forEach(config.locations.dir, function(next, dir) {
+					var self = this;
+					copy.dir(dir, this.tempDir + '/files/' + dir, {
+						destBase: 'files',
+					}, next);
+				})
+				.end(function(err, files) {
+					if (err) return next(err);
+					if (program.verbose) console.log(colors.blue('[File]'), colors.cyan(config.locations.dir.length), 'paths copied');
+					next();
+				});
+		})
+		// }}}
+
+		// Cleanup + end {{{
 		.end(function(err) {
 			if (this.tempDir) {
 				if (program.verbose) console.log(colors.grey('Cleaning up temp directory', this.tempDir));
@@ -152,6 +180,7 @@ if (program.dump) {
 
 			console.log(colors.green.bold('MindState backup completed!'));
 		});
+		// }}}
 	// }}}
 }
 // }}}
