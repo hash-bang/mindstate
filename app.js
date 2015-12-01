@@ -10,6 +10,7 @@ var homedir = require('homedir');
 var ini = require('ini');
 var inquirer = require('inquirer');
 var program = require('commander');
+var rsync = require('rsync');
 var tarGz = require('tar.gz');
 var temp = require('temp');
 var untildify = require('untildify');
@@ -87,7 +88,7 @@ if (program.dump) {
 					type: 'input',
 					name: 'serverAddress',
 					message: 'Enter the SSH server you wish to backup to (optional `username@` prefix)',
-					default: 'backups@zapp.mfdc.biz',
+					default: 'backups@zapp.mfdc.biz:~/backups/',
 				},
 				{
 					type: 'input',
@@ -174,23 +175,42 @@ if (program.dump) {
 		})
 		// }}}
 
+		// Rsync {{{
+		.then(function(next) {
+			var rsyncInst = new rsync()
+				.archive()
+				.compress()
+				.source(this.tarPath)
+				.destination(config.server.address)
+				.output(function(data) {
+					console.log(colors.blue('[RSYNC]'), data.toString());
+				}, function(err) {
+					console.log(colors.blue('[RSYNC]'), colors.red('Error:', data.toString()));
+				});
+
+			if (program.verbose) console.log(colors.grey('Begin RSYNC', rsyncInst.command()));
+
+			rsyncInst.execute(next);
+		})
+		// }}}
+
 		// Cleanup + end {{{
 		.end(function(err) {
 			// Cleaner {{{
 			if (this.tempDir) {
 				if (!program.clean) {
-					console.log(colors.grey('Skipping temp directory cleanup for', this.tempDir));
+					console.log(colors.grey('Cleaner: Skipping temp directory cleanup for', this.tempDir));
 				} else {
-					if (program.verbose) console.log(colors.grey('Cleaning up temp directory', this.tempDir));
+					if (program.verbose) console.log(colors.grey('Cleaner: Cleaning up temp directory', this.tempDir));
 					del.sync(this.tempDir, {force: true});
 				}
 			}
 
 			if (this.tarPath) {
 				if (!program.clean) {
-					console.log(colors.grey('Skipping tarball cleanup for', this.tarPath));
+					console.log(colors.grey('Cleaner: Skipping tarball cleanup for', this.tarPath));
 				} else {
-					if (program.verbose) console.log(colors.grey('Cleaning up tarball', this.tarPath));
+					if (program.verbose) console.log(colors.grey('Cleaner: Cleaning up tarball', this.tarPath));
 					del.sync(this.tempDir, {force: true});
 				}
 			}
