@@ -30,6 +30,7 @@ program
 	.option('--setup', 'Initalize config')
 	.option('-v, --verbose', 'Be verbose')
 	.option('--no-color', 'Disable colors')
+	.option('--no-clean', 'Do not delete temp directory after backup')
 	.parse(process.argv);
 
 
@@ -169,8 +170,12 @@ if (program.dump) {
 		// Cleanup + end {{{
 		.end(function(err) {
 			if (this.tempDir) {
-				if (program.verbose) console.log(colors.grey('Cleaning up temp directory', this.tempDir));
-				del.sync(this.tempDir, {force: true});
+				if (!program.clean) {
+					console.log(colors.grey('Skipping temp directory cleanup for', this.tempDir));
+				} else {
+					if (program.verbose) console.log(colors.grey('Cleaning up temp directory', this.tempDir));
+					del.sync(this.tempDir, {force: true});
+				}
 			}
 
 			if (err) {
