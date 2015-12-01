@@ -8,15 +8,30 @@ module.exports = {
 	name: 'mongodb',
 	description: 'Backup all MongoDB databases',
 	backup: function(finish) {
-		var cmd = _.get(mindstate.config, 'mongodb.command', 'mongodump -o ' + mindstate.tempDir + '/mongodb');
-
 		async()
 			.use(asyncExec)
+			.then(function(next) {
+				// Sanity checks {{{
+				if (!mindstate.config.mongodb.enabled) {
+					if (mindstate.program.verbose) console.log(colors.grey('MongoDB backup is disabled'));
+					return next('SKIP');
+				}
+				next();
+				// }}}
+			})
 			.then(function(next) {
 				if (mindstate.program.verbose) console.log(colors.blue('[MongoDB]'), 'Run', cmd);
 				next();
 			})
-			.exec(cmd)
+			.exec(mindstate.mongodb.command)
 			.end(finish);
+	},
+	config: function(finish) {
+		return finish(null, {
+			mongodb: {
+				enabled: true,
+				command: 'mongodump -o {{tempDir}}/mongodb',
+			},
+		});
 	},
 };

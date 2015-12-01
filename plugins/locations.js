@@ -10,12 +10,12 @@ module.exports = {
 		async()
 			.then(function(next) {
 				// Sanity checks {{{
-				if (_.get(mindstate.config, 'locations.enabled', undefined) === false) {
+				if (!mindstate.config.enabled) {
 					if (mindstate.program.verbose) console.log(colors.grey('Locations backup is disabled'));
 					return next('SKIP');
 				}
 
-				if (!_.has(mindstate.config, 'locations.dir') || !mindstate.config.locations.dir.length) {
+				if (!mindstate.config.locations.dir.length) {
 					if (mindstate.program.verbose) console.log(colors.grey('No additional locations to backup'));
 					return next('SKIP');
 				}
@@ -30,5 +30,13 @@ module.exports = {
 				return next();
 			})
 			.end(finish);
+	},
+	config: function(finish) {
+		return finish(null, {
+			locations: {
+				enabled: true,
+				dir: [],
+			},
+		});
 	},
 };

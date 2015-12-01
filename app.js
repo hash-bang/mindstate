@@ -133,6 +133,7 @@ if (program.dump) {
 						address: answers.serverAddress,
 					},
 					locations: {
+						enabled: function() { return !! answers.extraDirs }(),
 						dir: answers.extraDirs
 							.split(/\s*,\s*/)
 							.map(function(item) { // Replace ~ => homedir
@@ -141,7 +142,7 @@ if (program.dump) {
 							.map(function(item) { // Remove final '/'
 								return _.trimRight(item, '/');
 							})
-					}
+					},
 				});
 				next();
 			});
@@ -185,15 +186,27 @@ if (program.dump) {
 			});
 		})
 		// }}}
-		
+
 		// Backup things {{{
 		.then(function(next) {
 			async()
-				.forEach(plugins, function(next, plugin) {
-					plugin.backup(function(err) {
-						if (err == 'SKIP') return next(); // Ignore skipped plugins
-						return next(err);
-					});
+				.forEach(plugins, function(nextPlugin, plugin) {
+					async()
+						.then(function(next) {
+							if (!plugin.config) return nextPlugin();
+							plugin.config(function(err, pluginConfig) {
+								if (err) return next(err);
+								_.defaults(config, pluginConfig);
+								next();
+							});
+						})
+						.then(function(next) {
+							plugin.backup(function(err) {
+								if (err == 'SKIP') return next(); // Ignore skipped plugins
+								return next(err);
+							});
+						})
+						.end(nextPlugin);
 				})
 				.end(next);
 		})
