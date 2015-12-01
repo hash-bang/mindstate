@@ -2,6 +2,7 @@
 
 var _ = require('lodash');
 var async = require('async-chainable');
+var childProcess = require('child_process');
 var colors = require('colors');
 var copy = require('copy');
 var del = require('del');
