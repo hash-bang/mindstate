@@ -44,7 +44,7 @@ var plugins = [ // Array of recognised plugins
 	require('./plugins/mysql'),
 	require('./plugins/mongodb'),
 ].filter(function(plugin) { // If --plugins is specified filter out plugins NOT in that list
-	return (program.plugins && _.contains(program.plugins, plugin.name));
+	return (!program.plugins.length || _.contains(program.plugins, plugin.name));
 });
 
 if (!plugins.length) {
