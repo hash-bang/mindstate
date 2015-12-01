@@ -15,7 +15,6 @@ var rsync = require('rsync');
 var tarGz = require('tar.gz');
 var temp = require('temp');
 var untildify = require('untildify');
-var util = require('util');
 
 var home = homedir();
 var iniLocations = [
@@ -29,7 +28,8 @@ var version = '0.1.0'; // Version (auto-bump)
 program
 	.version(version) // FIXME: Correct with right version via Gulp (can't use require('package.json') as it upsets nexe)
 	.option('--backup', 'Perform a backup')
-	.option('--dump', 'Dump config and exit')
+	.option('--dump', 'Dump config')
+	.option('--dump-computed', 'Dump config (also showing default values)')
 	.option('--setup', 'Initalize config')
 	.option('-v, --verbose', 'Be verbose')
 	.option('--plugins [plugin1,plugin2,...]', 'Specify the plugins to use manually', function(i, v) { v.push(i); return v }, [])
@@ -78,8 +78,28 @@ global.mindstate = {
 // Actions {{{
 if (program.dump) {
 	// `--dump` {{{
-	console.log(util.inspect(config, {depth: null, colors: true}));
-	process.exit();
+	console.log(JSON.stringify(config, null, '\t'));
+	process.exit(0);
+	// }}}
+} else if (program.dumpComputed) {
+	// `--dump-computed` {{{
+	async()
+		.forEach(plugins, function(nextPlugin, plugin) {
+			if (!plugin.config) return next();
+			plugin.config(function(err, pluginConfig) {
+				if (err) return nextPlugin(err);
+				_.defaults(config, pluginConfig);
+				nextPlugin();
+			});
+		})
+		.end(function(err) {
+			if (err) {
+				console.log(colors.red('ERROR:'), err.toString());
+				return process.exit(1);
+			}
+			console.log(JSON.stringify(config, null, '\t'));
+			process.exit(0);
+		});
 	// }}}
 } else if (program.setup) {
 	// `--setup` {{{
