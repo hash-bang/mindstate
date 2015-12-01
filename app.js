@@ -37,6 +37,10 @@ program
 	.option('--no-upload', 'Skip the upload stage')
 	.parse(process.argv);
 
+var plugins = [
+	require('./plugins/locations'),
+	require('./plugins/postfix-virtual'),
+];
 
 // `config` - saved config (INI ~/.mindstate etc.) {{{
 var config = {};
@@ -49,6 +53,14 @@ if (iniFile) {
 	console.log(colors.red('No settings file found. Use `mindstate --setup` to set one up'));
 	process.exit(1);
 }
+// }}}
+
+// mindstate global object {{{
+global.mindstate = {
+	config: config,
+	program: program,
+	tempDir: '',
+};
 // }}}
 
 // Actions {{{
@@ -152,33 +164,26 @@ if (program.dump) {
 	// `--backup` {{{
 	async()
 		// Setup tempDir {{{
-		.then('tempDir', function(next) {
-			temp.mkdir({prefix: 'mindstate-'}, next);
-		})
 		.then(function(next) {
-			if (program.verbose) console.log(colors.grey('Using temp directory:', this.tempDir));
-			next();
+			temp.mkdir({prefix: 'mindstate-'}, function(err, dir) {
+				if (err) return next(err);
+				if (program.verbose) console.log(colors.grey('Using temp directory:', dir));
+				mindstate.tempDir = dir;
+				next();
+			});
 		})
 		// }}}
 		
-		// config.locations.dir - additional dir locations to backup {{{
+		// Backup things {{{
 		.then(function(next) {
-			if (!_.has(config, 'locations.dir') || !config.locations.dir.length) {
-				if (program.verbose) console.log(colors.grey('No additional locations to backup'));
-				return next();
-			}
-
 			async()
-				.set('tempDir', this.tempDir)
-				.forEach(config.locations.dir, function(next, dir) {
-					var self = this;
-					copy.dir(dir, this.tempDir + '/files/' + dir, next);
+				.forEach(plugins, function(next, plugin) {
+					plugin.backup(function(err) {
+						if (err == 'SKIP') return next(); // Ignore skipped plugins
+						return next(err);
+					});
 				})
-				.end(function(err, files) {
-					if (err) return next(err);
-					if (program.verbose) console.log(colors.blue('[File]'), colors.cyan(config.locations.dir.length), 'paths copied');
-					next();
-				});
+				.end(next);
 		})
 		// }}}
 
@@ -186,7 +191,7 @@ if (program.dump) {
 		.then(function(next) {
 			this.tarPath = temp.path({suffix: '.tar'});
 			if (program.verbose) console.log(colors.grey('Creating Tarball', this.tarPath));
-			new tarGz().compress(this.tempDir, this.tarPath, next);
+			new tarGz().compress(mindstate.tempDir, this.tarPath, next);
 		})
 		// }}}
 
@@ -217,12 +222,12 @@ if (program.dump) {
 		// Cleanup + end {{{
 		.end(function(err) {
 			// Cleaner {{{
-			if (this.tempDir) {
+			if (mindstate.tempDir) {
 				if (!program.clean) {
-					console.log(colors.grey('Cleaner: Skipping temp directory cleanup for', this.tempDir));
+					console.log(colors.grey('Cleaner: Skipping temp directory cleanup for', mindstate.tempDir));
 				} else {
-					if (program.verbose) console.log(colors.grey('Cleaner: Cleaning up temp directory', this.tempDir));
-					del.sync(this.tempDir, {force: true});
+					if (program.verbose) console.log(colors.grey('Cleaner: Cleaning up temp directory', mindstate.tempDir));
+					del.sync(mindstate.tempDir, {force: true});
 				}
 			}
 
@@ -231,13 +236,13 @@ if (program.dump) {
 					console.log(colors.grey('Cleaner: Skipping tarball cleanup for', this.tarPath));
 				} else {
 					if (program.verbose) console.log(colors.grey('Cleaner: Cleaning up tarball', this.tarPath));
-					del.sync(this.tempDir, {force: true});
+					del.sync(this.tarPath, {force: true});
 				}
 			}
 			// }}}
 
 			if (err) {
-				console.log(colors.red(err.toString()));
+				console.log(colors.red('ERROR:'), err.toString());
 				return process.exit(1);
 			}
 
