@@ -32,15 +32,21 @@ program
 	.option('--dump', 'Dump config and exit')
 	.option('--setup', 'Initalize config')
 	.option('-v, --verbose', 'Be verbose')
+	.option('--plugins [plugin1,plugin2,...]', 'Specify the plugins to use manually', function(i, v) { v.push(i); return v }, [])
 	.option('--no-color', 'Disable colors')
 	.option('--no-clean', 'Do not delete temp directory after backup')
 	.option('--no-upload', 'Skip the upload stage')
 	.parse(process.argv);
 
-var plugins = [
+var plugins = [ // Array of recognised plugins
 	require('./plugins/locations'),
 	require('./plugins/postfix-virtual'),
-];
+	require('./plugins/mysql'),
+].filter(function(plugin) { // If --plugins is specified filter out plugins NOT in that list
+	return (program.plugins && _.contains(program.plugins, plugin.name));
+});
+
+if (program.verbose) console.log('Using plugins:', plugins.map(function(plugin) { return colors.cyan(plugin.name) }).join(', '));
 
 // `config` - saved config (INI ~/.mindstate etc.) {{{
 var config = {};
