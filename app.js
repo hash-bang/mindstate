@@ -122,8 +122,16 @@ if (program.dump) {
 			// }}}
 		})
 		.then(function(next) {
-			// FIXME: Check server accessibility / creds
-			next();
+			// Extract server connection string from what might be the full path
+			var parsed = /^(.*)(:.*)$/.exec(config.server.address);
+
+			console.log('Attempting SSH key installation...');
+			var sshCopyId = childProcess.spawn('ssh-copy-id', [parsed[1]], {stdio: 'inherit'});
+
+			sshCopyId.on('close', function(code) {
+				if (code != 0) return next('ssh-copy-id exited with code ' + code);
+				return next();
+			});
 		})
 		.then(function(next) {
 			var encoded = "# MindState generated INI file\n\n" + ini.encode(config);
@@ -131,9 +139,10 @@ if (program.dump) {
 		})
 		.end(function(err) {
 			if (err) {
-				console.log(colors.red(err.toString()));
+				console.log(colors.red('ERROR:'), err.toString());
 				return process.exit(1);
 			}
+
 			console.log(colors.green.bold('MindState setup completed!'));
 		});
 	// }}}
