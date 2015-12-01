@@ -155,9 +155,7 @@ if (program.dump) {
 				.set('tempDir', this.tempDir)
 				.forEach(config.locations.dir, function(next, dir) {
 					var self = this;
-					copy.dir(dir, this.tempDir + '/files/' + dir, {
-						destBase: 'files',
-					}, next);
+					copy.dir(dir, this.tempDir + '/files/' + dir, next);
 				})
 				.end(function(err, files) {
 					if (err) return next(err);
