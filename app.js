@@ -33,6 +33,7 @@ program
 	.option('-v, --verbose', 'Be verbose')
 	.option('--no-color', 'Disable colors')
 	.option('--no-clean', 'Do not delete temp directory after backup')
+	.option('--no-upload', 'Skip the upload stage')
 	.parse(process.argv);
 
 
@@ -190,6 +191,11 @@ if (program.dump) {
 
 		// Rsync {{{
 		.then(function(next) {
+			if (!program.upload) {
+				console.log(colors.grey('Upload stage skipped'));
+				return next();
+			}
+
 			var rsyncInst = new rsync()
 				.archive()
 				.compress()
