@@ -68,32 +68,36 @@ if (program.dump) {
 					message: 'Where do you want to save this config?',
 					choices: [
 						{
-							key: 'global',
 							name: 'Global (/etc/mindstate)',
 							value: '/etc/mindstate',
 						},
 						{
-							key: 'user',
 							name: 'User (' + home + '/.mindstate)',
 							value: home + '/.mindstate',
 						},
 						{
-							key: 'dirLocal',
 							name: 'Local directory (' + process.cwd() + '/mindstate.config)',
 							value: process.cwd() + './mindstate.config',
 						},
 					],
+					default: function() {
+						if (iniFile == '/etc/mindstate') return 0;
+						if (/\.mindstate$/.test(iniFile)) return 1;
+						if (/mindstate\.config$/.test(iniFile)) return 2;
+						return undefined;
+					}(),
 				},
 				{
 					type: 'input',
 					name: 'serverAddress',
 					message: 'Enter the SSH server you wish to backup to (optional `username@` prefix)',
-					default: 'backups@zapp.mfdc.biz:~/backups/',
+					default: _.get(config, 'server.address', 'backups@zapp.mfdc.biz:~/backups/'),
 				},
 				{
 					type: 'input',
 					name: 'extraDirs',
 					message: 'Enter any additional directories to backup seperated with commas',
+					default: _.get(config, 'locations.dir', []).join(', '),
 				},
 			], function(answers) {
 				iniPath = answers.iniLocation;
