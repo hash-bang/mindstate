@@ -10,6 +10,7 @@ var homedir = require('homedir');
 var ini = require('ini');
 var inquirer = require('inquirer');
 var program = require('commander');
+var tarGz = require('tar.gz');
 var temp = require('temp');
 var untildify = require('untildify');
 var util = require('util');
@@ -165,8 +166,17 @@ if (program.dump) {
 		})
 		// }}}
 
+		// Create tarball {{{
+		.then(function(next) {
+			this.tarPath = temp.path({suffix: '.tar'});
+			if (program.verbose) console.log(colors.grey('Creating Tarball', this.tarPath));
+			new tarGz().compress(this.tempDir, this.tarPath, next);
+		})
+		// }}}
+
 		// Cleanup + end {{{
 		.end(function(err) {
+			// Cleaner {{{
 			if (this.tempDir) {
 				if (!program.clean) {
 					console.log(colors.grey('Skipping temp directory cleanup for', this.tempDir));
@@ -175,6 +185,16 @@ if (program.dump) {
 					del.sync(this.tempDir, {force: true});
 				}
 			}
+
+			if (this.tarPath) {
+				if (!program.clean) {
+					console.log(colors.grey('Skipping tarball cleanup for', this.tarPath));
+				} else {
+					if (program.verbose) console.log(colors.grey('Cleaning up tarball', this.tarPath));
+					del.sync(this.tempDir, {force: true});
+				}
+			}
+			// }}}
 
 			if (err) {
 				console.log(colors.red(err.toString()));
