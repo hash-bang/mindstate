@@ -10,6 +10,7 @@ var ini = require('ini');
 var inquirer = require('inquirer');
 var program = require('commander');
 var temp = require('temp');
+var untildify = require('untildify');
 var util = require('util');
 
 var home = homedir();
@@ -85,12 +86,28 @@ if (program.dump) {
 					message: 'Enter the SSH server you wish to backup to (optional `username@` prefix)',
 					default: 'backups@zapp.mfdc.biz',
 				},
+				{
+					type: 'input',
+					name: 'extraDirs',
+					message: 'Enter any additional directories to backup seperated with commas',
+				},
 			], function(answers) {
 				iniPath = answers.iniLocation;
+
 				_.merge(config, {
 					server: {
 						address: answers.serverAddress,
 					},
+					locations: {
+						dir: answers.extraDirs
+							.split(/\s*,\s*/)
+							.map(function(item) { // Replace ~ => homedir
+								return untildify(item);
+							})
+							.map(function(item) { // Remove final '/'
+								return _.trimRight(item, '/');
+							})
+					}
 				});
 				next();
 			});
