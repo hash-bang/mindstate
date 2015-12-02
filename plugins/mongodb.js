@@ -20,10 +20,10 @@ module.exports = {
 				// }}}
 			})
 			.then(function(next) {
-				if (mindstate.program.verbose) console.log(colors.blue('[MongoDB]'), 'Run', cmd);
+				if (mindstate.program.verbose) console.log(colors.blue('[MongoDB]'), 'Run', mindstate.config.mongodb.command);
 				next();
 			})
-			.exec(mindstate.mongodb.command)
+			.exec(mindstate.config.mongodb.command)
 			.end(finish);
 	},
 	config: function(finish) {

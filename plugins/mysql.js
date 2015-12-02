@@ -23,7 +23,7 @@ module.exports = {
 				// }}}
 			})
 			.then(function(next) {
-				if (mindstate.program.verbose) console.log(colors.blue('[MySQL]'), 'Run', cmd);
+				if (mindstate.program.verbose) console.log(colors.blue('[MySQL]'), 'Run', mindstate.config.mysql.command);
 				next();
 			})
 			.execDefaults({
