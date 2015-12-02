@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-var _ = require('lodash');
+var _ = require('lodash').mixin(require('lodash-deep'));
 var async = require('async-chainable');
 var childProcess = require('child_process');
 var colors = require('colors');
@@ -10,11 +10,16 @@ var fs = require('fs');
 var homedir = require('homedir');
 var ini = require('ini');
 var inquirer = require('inquirer');
+var mustache = require('mustache');
 var program = require('commander');
 var rsync = require('rsync');
 var tarGz = require('tar.gz');
 var temp = require('temp');
 var untildify = require('untildify');
+
+// Module config {{{
+mustache.escape = function(v) { return v }; // Disable Mustache HTML escaping
+// }}}
 
 var home = homedir();
 var iniLocations = [
@@ -54,6 +59,21 @@ if (!plugins.length) {
 
 if (program.verbose) console.log('Using plugins:', plugins.map(function(plugin) { return colors.cyan(plugin.name) }).join(', '));
 
+// Global functions {{{
+/**
+* Return the config object after Mustashifying all values
+* @param function finish(err, config) Callback to fire when completed
+*/
+function decorateConfig(finish) {
+	finish(null, _.deepMapValues(config, function(value, path) {
+		if (!_.isString(value)) return value;
+		return mustache.render(value, {
+			tempDir: mindstate.tempDir,
+		});
+	}));
+}
+// }}}
+
 // `config` - saved config (INI ~/.mindstate etc.) {{{
 var config = {};
 var iniFile = _(iniLocations)
@@ -90,6 +110,12 @@ if (program.dump) {
 				if (err) return nextPlugin(err);
 				_.defaults(config, pluginConfig);
 				nextPlugin();
+			});
+		})
+		.then(function(next) {
+			decorateConfig(function(err, newConfig) {
+				config = newConfig;
+				next();
 			});
 		})
 		.end(function(err) {
@@ -207,28 +233,29 @@ if (program.dump) {
 		})
 		// }}}
 
-		// Backup things {{{
+		// Recompute config {{{
+		.forEach(plugins, function(next, plugin) {
+			if (!plugin.config) return nextPlugin();
+			plugin.config(function(err, pluginConfig) {
+				if (err) return next(err);
+				_.defaults(config, pluginConfig);
+				next();
+			});
+		})
 		.then(function(next) {
-			async()
-				.forEach(plugins, function(nextPlugin, plugin) {
-					async()
-						.then(function(next) {
-							if (!plugin.config) return nextPlugin();
-							plugin.config(function(err, pluginConfig) {
-								if (err) return next(err);
-								_.defaults(config, pluginConfig);
-								next();
-							});
-						})
-						.then(function(next) {
-							plugin.backup(function(err) {
-								if (err == 'SKIP') return next(); // Ignore skipped plugins
-								return next(err);
-							});
-						})
-						.end(nextPlugin);
-				})
-				.end(next);
+			decorateConfig(function(err, newConfig) {
+				mindstate.config = newConfig;
+				next();
+			});
+		})
+		// }}}
+
+		// Execute each plugin {{{
+		.forEach(plugins, function(next, plugin) {
+			plugin.backup(function(err) {
+				if (err == 'SKIP') return next(); // Ignore skipped plugins
+				return next(err);
+			});
 		})
 		// }}}
 
