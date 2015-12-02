@@ -3,8 +3,13 @@
   "version": "0.0.1",
   "description": "Server backups with Node",
   "main": "app.js",
+  "bin": {
+    "mindstate": "./app.js"
+  },
+  "preferGlobal": true,
   "keywords": [
-    "backup"
+    "backup",
+    "mindstate"
   ],
   "author": "Matt Carter <m@ttcarter.com> (https://github.com/hash-bang)",
   "license": "MIT",
