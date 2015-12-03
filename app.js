@@ -99,6 +99,39 @@ function baseConfig(finish) {
 
 	});
 }
+
+/**
+* Task to load all user config
+* This executes the following functions in order:
+* 	- baseConfig()
+*	- plugins => plugin.config
+*	- decorateConfig()
+*/
+function loadConfig(finish) {
+	async()
+		.then(function(next) {
+			baseConfig(function(err, baseConfig) {
+				if (err) return next(err);
+				config = _.defaultsDeep(config, baseConfig);
+				next();
+			});
+		})
+		.forEach(plugins, function(next, plugin) {
+			if (!plugin.config) return nextPlugin();
+			plugin.config(function(err, pluginConfig) {
+				if (err) return next(err);
+				_.defaultsDeep(config, pluginConfig);
+				next();
+			});
+		})
+		.then(function(next) {
+			decorateConfig(function(err, newConfig) {
+				mindstate.config = config = newConfig;
+				next();
+			});
+		})
+		.end(finish);
+}
 // }}}
 
 // `config` - saved config (INI ~/.mindstate etc.) {{{
@@ -131,28 +164,7 @@ if (program.dump) {
 } else if (program.dumpComputed) {
 	// `--dump-computed` {{{
 	async()
-		.then(function(next) {
-			baseConfig(function(err, baseConfig) {
-				if (err) return next(err);
-				config = _.defaultsDeep(config, baseConfig);
-				next();
-			});
-		})
-		.forEach(plugins, function(nextPlugin, plugin) {
-			if (!plugin.config) return next();
-			plugin.config(function(err, pluginConfig) {
-				if (err) return nextPlugin(err);
-				_.defaultsDeep(config, pluginConfig);
-				nextPlugin();
-			});
-		})
-		.then(function(next) {
-			decorateConfig(function(err, newConfig) {
-				if (err) return next(err);
-				config = newConfig;
-				next();
-			});
-		})
+		.then(loadConfig)
 		.end(function(err) {
 			if (err) {
 				console.log(colors.red('ERROR:'), err.toString());
@@ -281,29 +293,7 @@ if (program.dump) {
 		})
 		// }}}
 
-		// Recompute config {{{
-		.then(function(next) {
-			baseConfig(function(err, baseConfig) {
-				if (err) return next(err);
-				config = _.defaultsDeep(config, baseConfig);
-				next();
-			});
-		})
-		.forEach(plugins, function(next, plugin) {
-			if (!plugin.config) return nextPlugin();
-			plugin.config(function(err, pluginConfig) {
-				if (err) return next(err);
-				_.defaultsDeep(config, pluginConfig);
-				next();
-			});
-		})
-		.then(function(next) {
-			decorateConfig(function(err, newConfig) {
-				mindstate.config = config = newConfig;
-				next();
-			});
-		})
-		// }}}
+		.then(loadConfig)
 
 		// Execute each plugin {{{
 		.forEach(plugins, function(next, plugin) {
