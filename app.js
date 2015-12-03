@@ -3,6 +3,7 @@
 var _ = require('lodash').mixin(require('lodash-deep'));
 var async = require('async-chainable');
 var childProcess = require('child_process');
+var cliTable = require('cli-table');
 var colors = require('colors');
 var copy = require('copy');
 var del = require('del');
@@ -10,6 +11,7 @@ var fs = require('fs');
 var homedir = require('homedir');
 var ini = require('ini');
 var inquirer = require('inquirer');
+var moment = require('moment');
 var mustache = require('mustache');
 var os = require('os');
 var program = require('commander');
@@ -35,6 +37,7 @@ program
 	.option('--dump', 'Dump config')
 	.option('--dump-computed', 'Dump config (also showing default values)')
 	.option('--setup', 'Initalize config')
+	.option('--list', 'List server backups')
 	.option('-v, --verbose', 'Be verbose')
 	.option('--plugin [plugin]', 'Specify the plugins to use manually. Can be used multiple times', function(i, v) { v.push(i); return v }, [])
 	.option('--no-color', 'Disable colors')
@@ -96,7 +99,13 @@ function baseConfig(finish) {
 		locations: {
 			dir: [],
 		},
-
+		style: {
+			date: 'YYYY-DD-MM HH:mm',
+			table: {
+				chars: {'mid': '', 'left-mid': '', 'mid-mid': '', 'right-mid': ''}, // See https://github.com/Automattic/cli-table#custom-styles
+				layout: {'padding-left': 1, 'padding-right': 1, head: ['blue'], border: ['grey'], compact : false},
+			}
+		},
 	});
 }
 
@@ -367,5 +376,84 @@ if (program.dump) {
 		});
 		// }}}
 	// }}}
+} else if (program.list) {
+	var sftpjs = require('sftpjs');
+	async()
+		.then(loadConfig)
+		.then('privateKey', function(next) {
+			if (config.server.password) return next(); // Use plaintext password instead
+
+			async()
+				.set('keyPath', home + '/.ssh/id_rsa')
+				.then('keyStat', function(next) {
+					fs.stat(this.keyPath, next);
+				})
+				.then('keyContent', function(next) {
+					fs.readFile(this.keyPath, next);
+				})
+				.end(function(err) {
+					if (err) return next(null, undefined); // Key not found or failed to read
+					if (program.verbose) console.log(colors.grey('Using local private key'));
+					next(null, this.keyContent);
+				});
+		})
+		.then(function(next) {
+			this.client = sftpjs()
+				.on('error', next)
+				.on('ready', function() {
+					if (program.verbose) console.log(colors.grey('SSH host connected'));
+					next();
+				})
+				.connect({
+					host: 'zapp.mfdc.biz',
+					username: 'backups',
+					password: _.get(config, 'server.password', undefined),
+					privateKey: this.privateKey || undefined,
+					debug: program.verbose ? function(d) { // Install debugger to spew SSH output if in verbose mode
+						console.log(colors.grey('[SSH]', d));
+					} : undefined,
+				});
+		})
+		.then('list', function(next) {
+			this.client.list('/home/backups/backups', true, next);
+		})
+		.end(function(err) {
+			if (err) {
+				console.log(colors.red('ERROR:'), err.toString());
+				return process.exit(1);
+			}
+
+			// Render table {{{
+			var table = new cliTable({
+				head: ['#', 'Name', 'Date', 'Size'],
+				chars: config.style.table.chars,
+				style: config.style.table.layout,
+			});
+
+			this.list
+				.sort(function(a, b) {
+					if (a.name > b.name) {
+						return -1;
+					} else if (a.name < b.name) {
+						return 1;
+					} else {
+						return 0;
+					}
+				})
+				.forEach(function(file, offset) {
+					table.push([
+						(offset + 1),
+						file.name,
+						moment(Date.parse(file.date)).format(config.style.date),
+						file.size,
+					]);
+				});
+
+			console.log(table.toString());
+			// }}}
+
+			process.exit(0);
+		});
 }
 // }}}
+
