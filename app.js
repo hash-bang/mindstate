@@ -35,7 +35,7 @@ program
 	.option('--dump-computed', 'Dump config (also showing default values)')
 	.option('--setup', 'Initalize config')
 	.option('-v, --verbose', 'Be verbose')
-	.option('--plugins [plugin1,plugin2,...]', 'Specify the plugins to use manually', function(i, v) { v.push(i); return v }, [])
+	.option('--plugin [plugin]', 'Specify the plugins to use manually. Can be used multiple times', function(i, v) { v.push(i); return v }, [])
 	.option('--no-color', 'Disable colors')
 	.option('--no-clean', 'Do not delete temp directory after backup')
 	.option('--no-upload', 'Skip the upload stage')
@@ -46,8 +46,8 @@ var plugins = [ // Array of recognised plugins
 	require('./plugins/postfix-virtual'),
 	require('./plugins/mysql'),
 	require('./plugins/mongodb'),
-].filter(function(plugin) { // If --plugins is specified filter out plugins NOT in that list
-	return (!program.plugins.length || _.contains(program.plugins, plugin.name));
+].filter(function(plugin) { // If --plugin is specified filter out plugins NOT in that list
+	return (!program.plugin.length || _.contains(program.plugin, plugin.name));
 });
 
 if (!plugins.length) {
