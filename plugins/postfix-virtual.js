@@ -7,7 +7,6 @@ module.exports = {
 	description: 'Backup PostFix\'s virtuals config',
 	backup: function(finish) {
 		async()
-			.set('file', '/etc/postfix/virtual')
 			.set('outFile', 'postfix-virtual')
 			.then(function(next) {
 				// Sanity checks {{{
@@ -19,13 +18,13 @@ module.exports = {
 				// }}}
 			})
 			.then('stat', function(next) {
-				fs.stat(this.file, function(err, stat) {
+				fs.stat(mindstate.config.postfixVirtual.path, function(err, stat) {
 					if (err) return next('SKIP'); // Not found
 					return next(null, stat);
 				});
 			})
 			.then(function(next) {
-				if (mindstate.program.verbose) console.log(colors.grey('Backup', this.file));
+				if (mindstate.program.verbose) console.log(colors.grey('Backup', mindstate.config.postfixVirtual.path));
 				copy('/etc/postfix/virtual', mindstate.tempDir + '/' + this.outFile, next);
 			})
 			.end(finish);
@@ -34,6 +33,7 @@ module.exports = {
 		return finish(null, {
 			postfixVirtual: {
 				enabled: true,
+				path: '/etc/postfix/virtual',
 			},
 		});
 	},
