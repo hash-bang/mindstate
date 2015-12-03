@@ -11,6 +11,7 @@ var homedir = require('homedir');
 var ini = require('ini');
 var inquirer = require('inquirer');
 var mustache = require('mustache');
+var os = require('os');
 var program = require('commander');
 var rsync = require('rsync');
 var tarGz = require('tar.gz');
@@ -66,6 +67,17 @@ function decorateConfig(finish) {
 	finish(null, _.deepMapValues(config, function(value, path) {
 		if (!_.isString(value)) return value;
 		return mustache.render(value, {
+			date: {
+				year: (new Date).getYear(),
+				month: lodash.padLeft((new Date).getMonth(), 2, '0'),
+				day: lodash.padLeft((new Date).getDay(), 2, '0'),
+				hour: lodash.padLeft((new Date).getHour(), 2, '0'),
+				minute: lodash.padLeft((new Date).getMinute(), 2, '0'),
+				second: lodash.padLeft((new Date).getSecond(), 2, '0'),
+			},
+			os: {
+				hostname: os.hostname(),
+			},
 			tempDir: mindstate.tempDir,
 		});
 	}));
@@ -165,6 +177,12 @@ if (program.dump) {
 				},
 				{
 					type: 'input',
+					name: 'filename',
+					message: 'Enter the prefered filename of the backup tarballs',
+					default: _.get(config, 'server.filename', '{{os.hostname}}-{{date.year}}-{{date.month}}-{{date.day}}-{{date.hour}}:{{date.minute}}.tar.gz'),
+				},
+				{
+					type: 'input',
 					name: 'extraDirs',
 					message: 'Enter any additional directories to backup seperated with commas',
 					default: _.get(config, 'locations.dir', []).join(', '),
@@ -175,6 +193,8 @@ if (program.dump) {
 				_.merge(config, {
 					server: {
 						address: answers.serverAddress,
+						filename: answers.filename,
+						// password: String, // Paintext password during SSH - do not do this. Use private keys instead
 					},
 					locations: {
 						enabled: function() { return !! answers.extraDirs }(),
@@ -276,7 +296,7 @@ if (program.dump) {
 				.archive()
 				.compress()
 				.source(this.tarPath)
-				.destination(config.server.address)
+				.destination(config.server.address + '/' + config.server.filename)
 				.output(function(data) {
 					console.log(colors.blue('[RSYNC]'), data.toString());
 				}, function(err) {
