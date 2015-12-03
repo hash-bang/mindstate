@@ -10,7 +10,7 @@ module.exports = {
 		async()
 			.then(function(next) {
 				// Sanity checks {{{
-				if (!mindstate.config.enabled) {
+				if (!mindstate.config.locations.enabled) {
 					if (mindstate.program.verbose) console.log(colors.grey('Locations backup is disabled'));
 					return next('SKIP');
 				}
