@@ -28,10 +28,8 @@ var iniLocations = [
 	'./mindstate.config',
 ];
 
-var version = '0.1.0'; // Version (auto-bump)
-
 program
-	.version(version) // FIXME: Correct with right version via Gulp (can't use require('package.json') as it upsets nexe)
+	.version(require('./package.json').version)
 	.option('--backup', 'Perform a backup')
 	.option('--dump', 'Dump config')
 	.option('--dump-computed', 'Dump config (also showing default values)')
