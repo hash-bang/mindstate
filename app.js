@@ -68,12 +68,12 @@ function decorateConfig(finish) {
 		if (!_.isString(value)) return value;
 		return mustache.render(value, {
 			date: {
-				year: (new Date).getYear(),
-				month: lodash.padLeft((new Date).getMonth(), 2, '0'),
-				day: lodash.padLeft((new Date).getDay(), 2, '0'),
-				hour: lodash.padLeft((new Date).getHour(), 2, '0'),
-				minute: lodash.padLeft((new Date).getMinute(), 2, '0'),
-				second: lodash.padLeft((new Date).getSecond(), 2, '0'),
+				year: (new Date).getFullYear(),
+				month: _.padLeft((new Date).getMonth(), 2, '0'),
+				day: _.padLeft((new Date).getDay(), 2, '0'),
+				hour: _.padLeft((new Date).getHours(), 2, '0'),
+				minute: _.padLeft((new Date).getMinutes(), 2, '0'),
+				second: _.padLeft((new Date).getSeconds(), 2, '0'),
 			},
 			os: {
 				hostname: os.hostname(),
