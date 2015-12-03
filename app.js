@@ -333,7 +333,7 @@ if (program.dump) {
 				.archive()
 				.compress()
 				.source(this.tarPath)
-				.destination(config.server.address + '/' + config.server.filename)
+				.destination(_.trimRight(config.server.address, '/') + '/' + config.server.filename)
 				.output(function(data) {
 					console.log(colors.blue('[RSYNC]'), data.toString());
 				}, function(err) {
