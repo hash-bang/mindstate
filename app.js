@@ -82,6 +82,23 @@ function decorateConfig(finish) {
 		});
 	}));
 }
+
+/**
+* Return a base config object
+*/
+function baseConfig(finish) {
+	finish(null, {
+		server: {
+			address: 'backups@zapp.mfdc.biz:~/backups/',
+			filename: '{{os.hostname}}-{{date.year}}-{{date.month}}-{{date.day}}-{{date.hour}}:{{date.minute}}.tar.gz',
+			// password: String, // Paintext password during SSH - do not do this. Use private keys instead
+		},
+		locations: {
+			dir: [],
+		},
+
+	});
+}
 // }}}
 
 // `config` - saved config (INI ~/.mindstate etc.) {{{
@@ -114,16 +131,24 @@ if (program.dump) {
 } else if (program.dumpComputed) {
 	// `--dump-computed` {{{
 	async()
+		.then(function(next) {
+			baseConfig(function(err, baseConfig) {
+				if (err) return next(err);
+				config = _.defaultsDeep(config, baseConfig);
+				next();
+			});
+		})
 		.forEach(plugins, function(nextPlugin, plugin) {
 			if (!plugin.config) return next();
 			plugin.config(function(err, pluginConfig) {
 				if (err) return nextPlugin(err);
-				_.defaults(config, pluginConfig);
+				_.defaultsDeep(config, pluginConfig);
 				nextPlugin();
 			});
 		})
 		.then(function(next) {
 			decorateConfig(function(err, newConfig) {
+				if (err) return next(err);
 				config = newConfig;
 				next();
 			});
@@ -141,6 +166,12 @@ if (program.dump) {
 	// `--setup` {{{
 	var iniPath;
 	async()
+		.then('baseConfig', function(next) {
+			baseConfig(function(err, baseConfig) {
+				if (err) return next(err);
+				next(null, _.defaults(config, baseConfig));
+			});
+		})
 		.then(function(next) {
 			// server.address {{{
 			inquirer.prompt([
@@ -173,28 +204,27 @@ if (program.dump) {
 					type: 'input',
 					name: 'serverAddress',
 					message: 'Enter the SSH server you wish to backup to (optional `username@` prefix)',
-					default: _.get(config, 'server.address', 'backups@zapp.mfdc.biz:~/backups/'),
+					default: config.server.address,
 				},
 				{
 					type: 'input',
 					name: 'filename',
 					message: 'Enter the prefered filename of the backup tarballs',
-					default: _.get(config, 'server.filename', '{{os.hostname}}-{{date.year}}-{{date.month}}-{{date.day}}-{{date.hour}}:{{date.minute}}.tar.gz'),
+					default: config.server.filename,
 				},
 				{
 					type: 'input',
 					name: 'extraDirs',
 					message: 'Enter any additional directories to backup seperated with commas',
-					default: _.get(config, 'locations.dir', []).join(', '),
+					default: config.locations.dir,
 				},
 			], function(answers) {
 				iniPath = answers.iniLocation;
 
-				_.merge(config, {
+				_.merge(this.baseConfig, {
 					server: {
 						address: answers.serverAddress,
 						filename: answers.filename,
-						// password: String, // Paintext password during SSH - do not do this. Use private keys instead
 					},
 					locations: {
 						enabled: function() { return !! answers.extraDirs }(),
@@ -252,17 +282,24 @@ if (program.dump) {
 		// }}}
 
 		// Recompute config {{{
+		.then(function(next) {
+			baseConfig(function(err, baseConfig) {
+				if (err) return next(err);
+				config = _.defaultsDeep(config, baseConfig);
+				next();
+			});
+		})
 		.forEach(plugins, function(next, plugin) {
 			if (!plugin.config) return nextPlugin();
 			plugin.config(function(err, pluginConfig) {
 				if (err) return next(err);
-				_.defaults(config, pluginConfig);
+				_.defaultsDeep(config, pluginConfig);
 				next();
 			});
 		})
 		.then(function(next) {
 			decorateConfig(function(err, newConfig) {
-				mindstate.config = newConfig;
+				mindstate.config = config = newConfig;
 				next();
 			});
 		})
