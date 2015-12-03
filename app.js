@@ -106,6 +106,10 @@ function baseConfig(finish) {
 				layout: {'padding-left': 1, 'padding-right': 1, head: ['blue'], border: ['grey'], compact : false},
 			}
 		},
+		list: {
+			patternFilter: true,
+			pattern: '^(.*)-([0-9]{4})-([0-9]{2})-([0-9]{2})-([0-9]{2}):([0-9]{2}).tar.gz$',
+		},
 	});
 }
 
@@ -430,6 +434,8 @@ if (program.dump) {
 				style: config.style.table.layout,
 			});
 
+			var compiledPattern = new RegExp(config.list.pattern);
+
 			this.list
 				.sort(function(a, b) {
 					if (a.name > b.name) {
@@ -440,6 +446,12 @@ if (program.dump) {
 						return 0;
 					}
 				})
+				.filter(function(item) {
+					return (
+						!config.list.patternFilter ||
+						compiledPattern.test(item.name)
+					);
+				})
 				.forEach(function(file, offset) {
 					table.push([
 						(offset + 1),
@@ -449,7 +461,7 @@ if (program.dump) {
 					]);
 				});
 
-			console.log(table.toString());
+			console.log(table.length ? table.toString() : 'Nothing to display');
 			// }}}
 
 			process.exit(0);
