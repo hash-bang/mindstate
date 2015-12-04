@@ -2,17 +2,21 @@
 
 var _ = require('lodash').mixin(require('lodash-deep'));
 var async = require('async-chainable');
+var availableVersions = require('available-versions');
 var childProcess = require('child_process');
 var cliTable = require('cli-table');
 var colors = require('colors');
 var copy = require('copy');
 var del = require('del');
+var findModules = require('find-modules');
 var fs = require('fs');
+var fspath = require('path');
 var homedir = require('homedir');
 var ini = require('ini');
 var inquirer = require('inquirer');
 var moment = require('moment');
 var mustache = require('mustache');
+var npm = require('npm');
 var os = require('os');
 var program = require('commander');
 var rsync = require('rsync');
@@ -30,14 +34,16 @@ var iniLocations = [
 	(home ? home + '/.mindstate' : null),
 	'./mindstate.config',
 ];
+var version = require('./package.json').version;
 
 program
-	.version(require('./package.json').version)
+	.version(version)
 	.option('--backup', 'Perform a backup')
 	.option('--dump', 'Dump config')
 	.option('--dump-computed', 'Dump config (also showing default values)')
-	.option('--setup', 'Initalize config')
 	.option('--list', 'List server backups')
+	.option('--setup', 'Initalize config')
+	.option('--update', 'Attempt to update the MindState client + plugins')
 	.option('-v, --verbose', 'Be verbose')
 	.option('--plugin [plugin]', 'Specify the plugins to use manually. Can be used multiple times', function(i, v) { v.push(i); return v }, [])
 	.option('--no-color', 'Disable colors')
@@ -165,6 +171,7 @@ global.mindstate = {
 	config: config,
 	program: program,
 	tempDir: '',
+	version: version,
 };
 // }}}
 
@@ -381,6 +388,7 @@ if (program.dump) {
 		// }}}
 	// }}}
 } else if (program.list) {
+	// `--list` {{{
 	var sftpjs = require('sftpjs');
 	async()
 		.then(loadConfig)
@@ -466,6 +474,110 @@ if (program.dump) {
 
 			process.exit(0);
 		});
+	// }}}
+} else if (program.update) {
+	// `--update` {{{
+	async()
+		.set('modulePaths', [])
+		.set('modules', [])
+		.then(loadConfig)
+		.then(function(next) { // Find list of modules to update
+			var self = this;
+			findModules(__dirname, function(err, modules) {
+				if (err) return next(err);
+
+				modules
+					.filter(function(module) { return (/^mindstate-/.test(fspath.basename(module))) })
+					.forEach(function(module) {
+						self.modulePaths.push(module);
+					});
+				next();
+			});
+		})
+		.forEach('modulePaths', function(nextModule, module) {
+			var self = this;
+			async()
+				.set('moduleName', fspath.basename(module))
+				.then('version', function(next) {
+					fs.readFile(module + '/package.json', function(err, data) {
+						if (!data) return next('Empty file'); // No data read
+						try {
+							var parsed = JSON.parse(data.toString());
+							if (!parsed.version) return next('No version info');
+							return next(null, parsed.version);
+						} catch (e) {
+							return next(e);
+						}
+					});
+				})
+				.then('availableVersion', function(next) {
+					var self = this;
+					availableVersions({name: self.moduleName, version: self.version}).then(function(res) {
+						next(null, res.versions && res.versions.length ? res.versions.slice(-1)[0] : self.version);
+					});
+				})
+				.then(function(next) {
+					if (program.verbose) console.log(colors.grey('Found module', this.moduleName, 'v' + this.version));
+					self.modules.push({
+						name: this.moduleName,
+						current: this.version,
+						available: this.availableVersion,
+					});
+					next();
+				})
+				.end(function(err) { nextModule() });
+		})
+		.then(function(next) {
+			if (!program.verbose) return next();
+
+			console.log(this.modules);
+
+			// Render table {{{
+			var table = new cliTable({
+				head: ['Name', 'Current Version', 'Available', 'Action'],
+				chars: config.style.table.chars,
+				style: config.style.table.layout,
+			});
+			this.modules.forEach(function(module) {
+				table.push([
+					module.name,
+					module.current,
+					module.available,
+					(module.current == module.available ? colors.grey('none') : colors.green('upgrade')),
+				]);
+			});
+			console.log(table.toString());
+			next();
+			// }}}
+		})
+		.then(function(next) {
+			var installable = this.modules
+				.filter(function(module) { return (module.current != module.available) })
+				.map(function(module) { return module.name });
+
+			if (!installable.length) {
+				console.log('Nothing to upgrade');
+				return next();
+			}
+
+			npm.load({global: true}, function(err) {
+				if (err) return next(err);
+				if (program.verbose) console.log(colors.grey('[NPM]', 'install', installable.join(' ')));
+
+				npm.commands.install(installable, function(err, data) {
+					if (err) return next(err);
+					console.log("DATA", data);
+					next();
+				});
+			});
+		})
+		.end(function(err) {
+			if (err) {
+				console.log(colors.red('ERROR:'), err.toString());
+				return process.exit(1);
+			}
+			process.exit(0);
+		});
+	// }}}
 }
 // }}}
-
