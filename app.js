@@ -241,7 +241,7 @@ if (program.dump) {
 					type: 'input',
 					name: 'extraDirs',
 					message: 'Enter any additional directories to backup seperated with commas',
-					default: config.locations.dir,
+					default: config.locations.dir.join(', '),
 				},
 			], function(answers) {
 				iniPath = answers.iniLocation;
@@ -252,8 +252,8 @@ if (program.dump) {
 						filename: answers.filename,
 					},
 					locations: {
-						enabled: function() { return !! answers.extraDirs }(),
-						dir: answers.extraDirs
+						enabled: (!! answers.extraDirs),
+						dir: (answers.extraDirs ? answers.extraDirs : '')
 							.split(/\s*,\s*/)
 							.map(function(item) { // Replace ~ => homedir
 								return untildify(item);
