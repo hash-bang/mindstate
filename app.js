@@ -8,12 +8,12 @@ var cliTable = require('cli-table');
 var colors = require('colors');
 var copy = require('copy');
 var del = require('del');
-var findModules = require('find-modules');
 var fs = require('fs');
 var fspath = require('path');
 var homedir = require('homedir');
 var ini = require('ini');
 var inquirer = require('inquirer');
+var moduleFinder = require('module-finder');
 var moment = require('moment');
 var mustache = require('mustache');
 var npm = require('npm');
@@ -478,59 +478,35 @@ if (program.dump) {
 } else if (program.update) {
 	// `--update` {{{
 	async()
-		.set('modulePaths', [])
 		.set('modules', [])
 		.then(loadConfig)
-		.then(function(next) { // Find list of modules to update
-			var self = this;
-			findModules(__dirname, function(err, modules) {
-				if (err) return next(err);
-
-				modules
-					.filter(function(module) { return (/^mindstate-/.test(fspath.basename(module))) })
-					.forEach(function(module) {
-						self.modulePaths.push(module);
-					});
-				next();
-			});
+		.then('modules', function(next) { // Find list of modules to update
+			if (program.verbose) console.log(colors.grey('Querying installed global modules'));
+			moduleFinder({
+				global: true,
+				filter: {
+					keywords: {'$in': 'mindstate'},
+				},
+			})
+				.then(function(modules) {
+					if (program.verbose) console.log(colors.grey('Found', modules.length, 'mindstate modules'));
+					next(null, modules);
+				}, function(err) {
+					next(err);
+				});
 		})
-		.forEach('modulePaths', function(nextModule, module) {
-			var self = this;
-			async()
-				.set('moduleName', fspath.basename(module))
-				.then('version', function(next) {
-					fs.readFile(module + '/package.json', function(err, data) {
-						if (!data) return next('Empty file'); // No data read
-						try {
-							var parsed = JSON.parse(data.toString());
-							if (!parsed.version) return next('No version info');
-							return next(null, parsed.version);
-						} catch (e) {
-							return next(e);
-						}
-					});
-				})
-				.then('availableVersion', function(next) {
-					var self = this;
-					availableVersions({name: self.moduleName, version: self.version}).then(function(res) {
-						next(null, res.versions && res.versions.length ? res.versions.slice(-1)[0] : self.version);
-					});
-				})
-				.then(function(next) {
-					if (program.verbose) console.log(colors.grey('Found module', this.moduleName, 'v' + this.version));
-					self.modules.push({
-						name: this.moduleName,
-						current: this.version,
-						available: this.availableVersion,
-					});
-					next();
-				})
-				.end(function(err) { nextModule() });
+		.forEach('modules', function(nextModule, module) { // Glue .latestVersion property to item
+			availableVersions({
+				name: module.pkg.name,
+				version: module.pkg.version,
+			})
+				.then(function(res) {
+					module.pkg.versionLatest = res.versions && res.versions.length ? res.versions.slice(-1)[0] : module.pkg.version;
+					nextModule();
+				});
 		})
 		.then(function(next) {
 			if (!program.verbose) return next();
-
-			console.log(this.modules);
 
 			// Render table {{{
 			var table = new cliTable({
@@ -540,10 +516,10 @@ if (program.dump) {
 			});
 			this.modules.forEach(function(module) {
 				table.push([
-					module.name,
-					module.current,
-					module.available,
-					(module.current == module.available ? colors.grey('none') : colors.green('upgrade')),
+					module.pkg.name,
+					module.pkg.version,
+					module.pkg.versionLatest,
+					(module.pkg.version == module.pkg.versionLatest ? colors.grey('none') : colors.green('upgrade')),
 				]);
 			});
 			console.log(table.toString());
@@ -552,8 +528,8 @@ if (program.dump) {
 		})
 		.then(function(next) {
 			var installable = this.modules
-				.filter(function(module) { return (module.current != module.available) })
-				.map(function(module) { return module.name });
+				.filter(function(module) { return (module.pkg.version != module.pkg.versionLatest) })
+				.map(function(module) { return module.pkg.name });
 
 			if (!installable.length) {
 				console.log('Nothing to upgrade');
