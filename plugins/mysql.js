@@ -14,20 +14,24 @@ module.exports = {
 		async()
 			.use(asyncExec)
 			.set('outFile', 'mysql.sql')
-			.then('binPath', function(next) {
-				which('mysqldump', next);
-			})
 			.then(function(next) {
 				// Sanity checks {{{
 				if (!mindstate.config.mysql.enabled) {
 					if (mindstate.program.verbose) console.log(colors.grey('MySQL backup is disabled'));
 					return next('SKIP');
 				}
-				if (!this.binPath) {
-					if (mindstate.program.verbose) console.log(colors.grey('`mysqldump` is not in PATH'));
-					return next('SKIP');
-				}
 				next();
+				// }}}
+			})
+			.then('binPath', function(next) {
+				// Check for binary {{{
+				which('mysqldump', function(err) {
+					if (err) {
+						if (mindstate.program.verbose) console.log(colors.grey('`mysqldump` is not in PATH'));
+						return next('SKIP');
+					}
+					next();
+				});
 				// }}}
 			})
 			.then(function(next) {

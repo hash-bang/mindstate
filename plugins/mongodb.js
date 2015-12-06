@@ -20,11 +20,18 @@ module.exports = {
 					if (mindstate.program.verbose) console.log(colors.grey('MongoDB backup is disabled'));
 					return next('SKIP');
 				}
-				if (!this.binPath) {
-					if (mindstate.program.verbose) console.log(colors.grey('`mongodump` is not in PATH'));
-					return next('SKIP');
-				}
 				next();
+				// }}}
+			})
+			.then('binPath', function(next) {
+				// Check for binary {{{
+				which('mongodump', function(err) {
+					if (err) {
+						if (mindstate.program.verbose) console.log(colors.grey('`mongodump` is not in PATH'));
+						return next('SKIP');
+					}
+					next();
+				});
 				// }}}
 			})
 			.then(function(next) {
