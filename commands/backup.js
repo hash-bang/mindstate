@@ -25,6 +25,15 @@ module.exports = function(finish) {
 		// Execute each plugin {{{
 		.forEach(mindstate.plugins, function(nextPlugin, plugin) {
 			async()
+				.then(function(next) {
+					// Plugin sanity checks {{{
+					if (!_.isFunction(plugin.backup)) {
+						if (mindstate.program.verbose) console.log('Plugin', plugin.name, 'does not support backup');
+						return next('SKIP');
+					}
+					next();
+					// }}}
+				})
 				.then('workspace', function(next) {
 					// Setup workspace {{{
 					var workspaceDir = mindstate.tempDir + '/' + plugin.name;
@@ -45,7 +54,10 @@ module.exports = function(finish) {
 					}, this.workspace);
 					// }}}
 				})
-				.end(nextPlugin);
+				.end(function(err) {
+					if (err && err == 'SKIP') return nextPlugin();
+					nextPlugin(err);
+				});
 		})
 		// }}}
 
