@@ -11,9 +11,6 @@ module.exports = {
 	backup: function(finish, workspace) {
 		async()
 			.use(asyncExec)
-			.then('binPath', function(next) {
-				which('mongodump', next);
-			})
 			.then(function(next) {
 				// Sanity checks {{{
 				if (!mindstate.config.mongodb.enabled) {
