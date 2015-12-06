@@ -26,7 +26,7 @@ module.exports = {
 				copy.dir(dir, mindstate.tempDir + '/files/' + dir, next);
 			})
 			.then(function(next) {
-				if (mindstate.program.verbose) console.log(colors.blue('[File]'), colors.cyan(mindstate.config.locations.dir.length), 'paths copied');
+				if (mindstate.program.verbose) console.log(colors.blue('[Locations]'), colors.cyan(mindstate.config.locations.dir.length), 'paths copied');
 				return next();
 			})
 			.end(finish);

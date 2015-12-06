@@ -2,36 +2,21 @@
 
 var _ = require('lodash').mixin(require('lodash-deep'));
 var async = require('async-chainable');
-var availableVersions = require('available-versions');
-var childProcess = require('child_process');
-var cliTable = require('cli-table');
 var colors = require('colors');
-var copy = require('copy');
-var del = require('del');
 var fs = require('fs');
-var fspath = require('path');
-var homedir = require('homedir');
 var ini = require('ini');
-var inquirer = require('inquirer');
-var moduleFinder = require('module-finder');
-var moment = require('moment');
+var homedir = require('homedir');
 var mustache = require('mustache');
-var npm = require('npm');
 var os = require('os');
 var program = require('commander');
-var rsync = require('rsync');
-var tarGz = require('tar.gz');
-var temp = require('temp');
-var untildify = require('untildify');
 
 // Module config {{{
 mustache.escape = function(v) { return v }; // Disable Mustache HTML escaping
 // }}}
 
-var home = homedir();
 var iniLocations = [
 	'/etc/mindstate',
-	(home ? home + '/.mindstate' : null),
+	(homedir() ? homedir() + '/.mindstate' : null),
 	'./mindstate.config',
 ];
 var version = require('./package.json').version;
@@ -67,13 +52,38 @@ if (!plugins.length) {
 
 if (program.verbose) console.log('Using plugins:', plugins.map(function(plugin) { return colors.cyan(plugin.name) }).join(', '));
 
+// `config` - saved config (INI ~/.mindstate etc.) {{{
+var config = {};
+var iniFile = _(iniLocations)
+	.compact()
+	.find(fs.existsSync);
+if (iniFile) {
+	config = ini.parse(fs.readFileSync(iniFile, 'utf-8'));
+} else if (!program.setup) {
+	console.log(colors.red('No settings file found. Use `mindstate --setup` to set one up'));
+	process.exit(1);
+}
+// }}}
+
+// mindstate global object {{{
+global.mindstate = {
+	config: config,
+	configFile: iniFile,
+	program: program,
+	tempDir: '',
+	version: version,
+	functions: {},
+	plugins: plugins,
+};
+// }}}
+
 // Global functions {{{
 /**
 * Return the config object after Mustashifying all values
 * @param function finish(err, config) Callback to fire when completed
 */
-function decorateConfig(finish) {
-	finish(null, _.deepMapValues(config, function(value, path) {
+mindstate.functions.decorateConfig = function(finish) {
+	finish(null, _.deepMapValues(mindstate.config, function(value, path) {
 		if (!_.isString(value)) return value;
 		return mustache.render(value, {
 			date: {
@@ -95,7 +105,7 @@ function decorateConfig(finish) {
 /**
 * Return a base config object
 */
-function baseConfig(finish) {
+mindstate.functions.baseConfig = function(finish) {
 	finish(null, {
 		server: {
 			address: 'backups@zapp.mfdc.biz:~/backups/',
@@ -126,12 +136,12 @@ function baseConfig(finish) {
 *	- plugins => plugin.config
 *	- decorateConfig()
 */
-function loadConfig(finish) {
+mindstate.functions.loadConfig = function(finish) {
 	async()
 		.then(function(next) {
-			baseConfig(function(err, baseConfig) {
+			mindstate.functions.baseConfig(function(err, baseConfig) {
 				if (err) return next(err);
-				config = _.defaultsDeep(config, baseConfig);
+				mindstate.config = _.defaultsDeep(mindstate.config, baseConfig);
 				next();
 			});
 		})
@@ -139,13 +149,13 @@ function loadConfig(finish) {
 			if (!plugin.config) return nextPlugin();
 			plugin.config(function(err, pluginConfig) {
 				if (err) return next(err);
-				_.defaultsDeep(config, pluginConfig);
+				_.defaultsDeep(mindstate.config, pluginConfig);
 				next();
 			});
 		})
 		.then(function(next) {
-			decorateConfig(function(err, newConfig) {
-				mindstate.config = config = newConfig;
+			mindstate.functions.decorateConfig(function(err, newConfig) {
+				mindstate.config = newConfig;
 				next();
 			});
 		})
@@ -153,407 +163,45 @@ function loadConfig(finish) {
 }
 // }}}
 
-// `config` - saved config (INI ~/.mindstate etc.) {{{
-var config = {};
-var iniFile = _(iniLocations)
-	.compact()
-	.find(fs.existsSync);
-if (iniFile) {
-	config = ini.parse(fs.readFileSync(iniFile, 'utf-8'));
-} else if (!program.setup) {
-	console.log(colors.red('No settings file found. Use `mindstate --setup` to set one up'));
-	process.exit(1);
-}
-// }}}
 
-// mindstate global object {{{
-global.mindstate = {
-	config: config,
-	program: program,
-	tempDir: '',
-	version: version,
+var commands = {
+	backup: require('./commands/backup'),
+	dump: require('./commands/dump'),
+	dumpComputed: require('./commands/dumpComputed'),
+	list: require('./commands/list'),
+	setup: require('./commands/setup'),
+	update: require('./commands/update'),
 };
-// }}}
 
-// Actions {{{
-if (program.dump) {
-	// `--dump` {{{
-	console.log(JSON.stringify(config, null, '\t'));
-	process.exit(0);
-	// }}}
-} else if (program.dumpComputed) {
-	// `--dump-computed` {{{
-	async()
-		.then(loadConfig)
-		.end(function(err) {
-			if (err) {
-				console.log(colors.red('ERROR:'), err.toString());
-				return process.exit(1);
-			}
-			console.log(JSON.stringify(config, null, '\t'));
-			process.exit(0);
-		});
-	// }}}
-} else if (program.setup) {
-	// `--setup` {{{
-	var iniPath;
-	async()
-		.then('baseConfig', function(next) {
-			baseConfig(function(err, baseConfig) {
-				if (err) return next(err);
-				next(null, _.defaults(config, baseConfig));
-			});
-		})
-		.then(function(next) {
-			// server.address {{{
-			inquirer.prompt([
-				{
-					type: 'list',
-					name: 'iniLocation',
-					message: 'Where do you want to save this config?',
-					choices: [
-						{
-							name: 'Global (/etc/mindstate)',
-							value: '/etc/mindstate',
-						},
-						{
-							name: 'User (' + home + '/.mindstate)',
-							value: home + '/.mindstate',
-						},
-						{
-							name: 'Local directory (' + process.cwd() + '/mindstate.config)',
-							value: process.cwd() + './mindstate.config',
-						},
-					],
-					default: function() {
-						if (iniFile == '/etc/mindstate') return 0;
-						if (/\.mindstate$/.test(iniFile)) return 1;
-						if (/mindstate\.config$/.test(iniFile)) return 2;
-						return undefined;
-					}(),
-				},
-				{
-					type: 'input',
-					name: 'serverAddress',
-					message: 'Enter the SSH server you wish to backup to (optional `username@` prefix)',
-					default: config.server.address,
-				},
-				{
-					type: 'input',
-					name: 'filename',
-					message: 'Enter the prefered filename of the backup tarballs',
-					default: config.server.filename,
-				},
-				{
-					type: 'input',
-					name: 'extraDirs',
-					message: 'Enter any additional directories to backup seperated with commas',
-					default: config.locations.dir.join(', '),
-				},
-			], function(answers) {
-				iniPath = answers.iniLocation;
-
-				_.merge(this.baseConfig, {
-					server: {
-						address: answers.serverAddress,
-						filename: answers.filename,
-					},
-					locations: {
-						enabled: (!! answers.extraDirs),
-						dir: (answers.extraDirs ? answers.extraDirs : '')
-							.split(/\s*,\s*/)
-							.map(function(item) { // Replace ~ => homedir
-								return untildify(item);
-							})
-							.map(function(item) { // Remove final '/'
-								return _.trimRight(item, '/');
-							})
-					},
-				});
-				next();
-			});
-			// }}}
-		})
-		.then(function(next) {
-			// Extract server connection string from what might be the full path
-			var parsed = /^(.*)(:.*)$/.exec(config.server.address);
-
-			console.log('Attempting SSH key installation...');
-			var sshCopyId = childProcess.spawn('ssh-copy-id', [parsed[1]], {stdio: 'inherit'});
-
-			sshCopyId.on('close', function(code) {
-				if (code != 0) return next('ssh-copy-id exited with code ' + code);
-				return next();
-			});
-		})
-		.then(function(next) {
-			var encoded = "# MindState generated INI file\n\n" + ini.encode(config);
-			fs.writeFile(iniPath, encoded, next);
-		})
-		.end(function(err) {
-			if (err) {
-				console.log(colors.red('ERROR:'), err.toString());
-				return process.exit(1);
-			}
-
-			console.log(colors.green.bold('MindState setup completed!'));
-		});
-	// }}}
-} else if (program.backup) {
-	// `--backup` {{{
-	async()
-		// Setup tempDir {{{
-		.then(function(next) {
-			temp.mkdir({prefix: 'mindstate-'}, function(err, dir) {
-				if (err) return next(err);
-				if (program.verbose) console.log(colors.grey('Using temp directory:', dir));
-				mindstate.tempDir = dir;
-				next();
-			});
-		})
-		// }}}
-
-		.then(loadConfig)
-
-		// Execute each plugin {{{
-		.forEach(plugins, function(next, plugin) {
-			plugin.backup(function(err) {
-				if (err == 'SKIP') return next(); // Ignore skipped plugins
-				return next(err);
-			});
-		})
-		// }}}
-
-		// Create tarball {{{
-		.then(function(next) {
-			this.tarPath = temp.path({suffix: '.tar'});
-			if (program.verbose) console.log(colors.grey('Creating Tarball', this.tarPath));
-			new tarGz().compress(mindstate.tempDir, this.tarPath, next);
-		})
-		// }}}
-
-		// Rsync {{{
-		.then(function(next) {
-			if (!program.upload) {
-				console.log(colors.grey('Upload stage skipped'));
-				return next();
-			}
-
-			var rsyncInst = new rsync()
-				.archive()
-				.compress()
-				.source(this.tarPath)
-				.destination(_.trimRight(config.server.address, '/') + '/' + config.server.filename)
-				.output(function(data) {
-					console.log(colors.blue('[RSYNC]'), data.toString());
-				}, function(err) {
-					console.log(colors.blue('[RSYNC]'), colors.red('Error:', data.toString()));
-				});
-
-			if (program.verbose) console.log(colors.grey('Begin RSYNC', rsyncInst.command()));
-
-			rsyncInst.execute(next);
-		})
-		// }}}
-
-		// Cleanup + end {{{
-		.end(function(err) {
-			// Cleaner {{{
-			if (mindstate.tempDir) {
-				if (!program.clean) {
-					console.log(colors.grey('Cleaner: Skipping temp directory cleanup for', mindstate.tempDir));
-				} else {
-					if (program.verbose) console.log(colors.grey('Cleaner: Cleaning up temp directory', mindstate.tempDir));
-					del.sync(mindstate.tempDir, {force: true});
-				}
-			}
-
-			if (this.tarPath) {
-				if (!program.clean) {
-					console.log(colors.grey('Cleaner: Skipping tarball cleanup for', this.tarPath));
-				} else {
-					if (program.verbose) console.log(colors.grey('Cleaner: Cleaning up tarball', this.tarPath));
-					del.sync(this.tarPath, {force: true});
-				}
-			}
-			// }}}
-
-			if (err) {
-				console.log(colors.red('ERROR:'), err.toString());
-				return process.exit(1);
-			}
-
-			console.log(colors.green.bold('MindState backup completed!'));
-		});
-		// }}}
-	// }}}
-} else if (program.list) {
-	// `--list` {{{
-	var sftpjs = require('sftpjs');
-	async()
-		.then(loadConfig)
-		.then('privateKey', function(next) {
-			if (config.server.password) return next(); // Use plaintext password instead
-
-			async()
-				.set('keyPath', home + '/.ssh/id_rsa')
-				.then('keyStat', function(next) {
-					fs.stat(this.keyPath, next);
-				})
-				.then('keyContent', function(next) {
-					fs.readFile(this.keyPath, next);
-				})
-				.end(function(err) {
-					if (err) return next(null, undefined); // Key not found or failed to read
-					if (program.verbose) console.log(colors.grey('Using local private key'));
-					next(null, this.keyContent);
-				});
-		})
-		.then(function(next) {
-			this.client = sftpjs()
-				.on('error', next)
-				.on('ready', function() {
-					if (program.verbose) console.log(colors.grey('SSH host connected'));
-					next();
-				})
-				.connect({
-					host: 'zapp.mfdc.biz',
-					username: 'backups',
-					password: _.get(config, 'server.password', undefined),
-					privateKey: this.privateKey || undefined,
-					debug: program.verbose ? function(d) { // Install debugger to spew SSH output if in verbose mode
-						console.log(colors.grey('[SSH]', d));
-					} : undefined,
-				});
-		})
-		.then('list', function(next) {
-			this.client.list('/home/backups/backups', true, next);
-		})
-		.end(function(err) {
-			if (err) {
-				console.log(colors.red('ERROR:'), err.toString());
-				return process.exit(1);
-			}
-
-			// Render table {{{
-			var table = new cliTable({
-				head: ['#', 'Name', 'Date', 'Size'],
-				chars: config.style.table.chars,
-				style: config.style.table.layout,
-			});
-
-			var compiledPattern = new RegExp(config.list.pattern);
-
-			this.list
-				.sort(function(a, b) {
-					if (a.name > b.name) {
-						return -1;
-					} else if (a.name < b.name) {
-						return 1;
-					} else {
-						return 0;
-					}
-				})
-				.filter(function(item) {
-					return (
-						!config.list.patternFilter ||
-						compiledPattern.test(item.name)
-					);
-				})
-				.forEach(function(file, offset) {
-					table.push([
-						(offset + 1),
-						file.name,
-						moment(Date.parse(file.date)).format(config.style.date),
-						file.size,
-					]);
-				});
-
-			console.log(table.length ? table.toString() : 'Nothing to display');
-			// }}}
-
-			process.exit(0);
-		});
-	// }}}
-} else if (program.update) {
-	// `--update` {{{
-	async()
-		.set('modules', [])
-		.then(loadConfig)
-		.then('modules', function(next) { // Find list of modules to update
-			if (program.verbose) console.log(colors.grey('Querying installed global modules'));
-			moduleFinder({
-				global: true,
-				filter: {
-					keywords: {'$in': 'mindstate'},
-				},
-			})
-				.then(function(modules) {
-					if (program.verbose) console.log(colors.grey('Found', modules.length, 'mindstate modules'));
-					next(null, modules);
-				}, function(err) {
-					next(err);
-				});
-		})
-		.forEach('modules', function(nextModule, module) { // Glue .latestVersion property to item
-			availableVersions({
-				name: module.pkg.name,
-				version: module.pkg.version,
-			})
-				.then(function(res) {
-					module.pkg.versionLatest = res.versions && res.versions.length ? res.versions.slice(-1)[0] : module.pkg.version;
-					nextModule();
-				});
-		})
-		.then(function(next) {
-			if (!program.verbose) return next();
-
-			// Render table {{{
-			var table = new cliTable({
-				head: ['Name', 'Current Version', 'Available', 'Action'],
-				chars: config.style.table.chars,
-				style: config.style.table.layout,
-			});
-			this.modules.forEach(function(module) {
-				table.push([
-					module.pkg.name,
-					module.pkg.version,
-					module.pkg.versionLatest,
-					(module.pkg.version == module.pkg.versionLatest ? colors.grey('none') : colors.green('upgrade')),
-				]);
-			});
-			console.log(table.toString());
-			next();
-			// }}}
-		})
-		.then(function(next) {
-			var installable = this.modules
-				.filter(function(module) { return (module.pkg.version != module.pkg.versionLatest) })
-				.map(function(module) { return module.pkg.name });
-
-			if (!installable.length) {
-				console.log('Nothing to upgrade');
-				return next();
-			}
-
-			npm.load({global: true}, function(err) {
-				if (err) return next(err);
-				if (program.verbose) console.log(colors.grey('[NPM]', 'install', installable.join(' ')));
-
-				npm.commands.install(installable, function(err, data) {
-					if (err) return next(err);
-					console.log("DATA", data);
-					next();
-				});
-			});
-		})
-		.end(function(err) {
-			if (err) {
-				console.log(colors.red('ERROR:'), err.toString());
-				return process.exit(1);
-			}
-			process.exit(0);
-		});
-	// }}}
-}
-// }}}
+async()
+	.then(function(next) {
+		if (!program.update) return next();
+		commands.update(next);
+	})
+	.then(function(next) {
+		if (!program.dump) return next();
+		commands.dump(next);
+	})
+	.then(function(next) {
+		if (!program.dumpComputed) return next();
+		commands.dumpComputed(next);
+	})
+	.then(function(next) {
+		if (!program.setup) return next();
+		commands.setup(next);
+	})
+	.then(function(next) {
+		if (!program.backup) return next();
+		commands.backup(next);
+	})
+	.then(function(next) {
+		if (!program.list) return next();
+		commands.list(next);
+	})
+	.end(function(err) {
+		if (err) {
+			console.log(colors.red('ERROR:'), err.toString());
+			return process.exit(1);
+		}
+		process.exit(0);
+	});
