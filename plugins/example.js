@@ -19,7 +19,6 @@ module.exports = {
 			.then(function(next) {
 				// Do something here - like write a file to the workspace
 				fs.writeFile('Hello World', workspace.dir + '/hello.txt', next);
-				next();
 			})
 			.end(finish);
 	},

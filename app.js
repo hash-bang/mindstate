@@ -9,6 +9,7 @@ var homedir = require('homedir');
 var mustache = require('mustache');
 var os = require('os');
 var program = require('commander');
+var requireDir = require('require-dir');
 
 // Module config {{{
 mustache.escape = function(v) { return v }; // Disable Mustache HTML escaping
@@ -36,15 +37,14 @@ program
 	.option('--no-upload', 'Skip the upload stage')
 	.parse(process.argv);
 
-var plugins = [ // Array of recognised plugins
-	require('./plugins/locations'),
-	require('./plugins/postfix-virtual'),
-	require('./plugins/mysql'),
-	require('./plugins/mongodb'),
-	require('./plugins/stats'),
-].filter(function(plugin) { // If --plugin is specified filter out plugins NOT in that list
-	return (!program.plugin.length || _.contains(program.plugin, plugin.name));
-});
+// Load plugins, ensure its unique and remove anythng if --plugin is specified
+var plugins = _(requireDir('./plugins', {camelcase: true}))
+	.map(function(contents, mod) { return contents })
+	.uniq(false, 'name')
+	.filter(function(plugin, id) {
+		return (!program.plugin.length || _.contains(program.plugin, plugin.name));
+	})
+	.value();
 
 if (!plugins.length) {
 	console.log('No plugins to run!');
