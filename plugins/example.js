@@ -1,5 +1,6 @@
 var _ = require('lodash');
 var async = require('async-chainable');
+var fs = require('fs');
 
 module.exports = {
 	name: 'acme',
@@ -18,6 +19,25 @@ module.exports = {
 			.then(function(next) {
 				// Do something here - like write a file to the workspace
 				fs.writeFile('Hello World', workspace.dir + '/hello.txt', next);
+				next();
+			})
+			.end(finish);
+	},
+	restore: function(finish, workspace) {
+		async()
+			.then(function(next) {
+				// Sanity checks {{{
+				if (!mindstate.config.acme.enabled) {
+					if (mindstate.program.verbose) console.log(colors.grey('Acme restore is disabled'));
+					return next('SKIP');
+				}
+				next();
+				// }}}
+			})
+			.then(function(next) {
+				// Do something here - like read back the file to the desktop
+				fs.createReadStream(workspace.dir + '/hello.txt')
+					.pipe(fs.createWriteStream('/tmp/hello.txt'));
 				next();
 			})
 			.end(finish);
