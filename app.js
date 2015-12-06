@@ -41,6 +41,7 @@ var plugins = [ // Array of recognised plugins
 	require('./plugins/postfix-virtual'),
 	require('./plugins/mysql'),
 	require('./plugins/mongodb'),
+	require('./plugins/stats'),
 ].filter(function(plugin) { // If --plugin is specified filter out plugins NOT in that list
 	return (!program.plugin.length || _.contains(program.plugin, plugin.name));
 });
