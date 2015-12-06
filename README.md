@@ -48,3 +48,16 @@ You can perform manual backups, which can be useful for testing, by running:
 	mindstate --backup
 
 Optionally also specifying `-v` so the CLI is more verbose.
+
+
+
+Writing MindState plugins
+=========================
+The MindState plugin system is designed to make it as simple as possible to add functionality.
+
+In essence each plugin, when run is provided with its own workspace - a writable directory on disk - anything placed in this directory is folded into the MindState backup. Each plugin is expected to expose at least a `backup()` function which writes to this location asyncronosly, returning execution to the main process on completion.
+
+A plugin can optionally also expose a `restore()` method which performs the reverse action - taking a workspace and restoring the state of the machine from it.
+
+
+All plugins should be tagged `mindstate` in their respective `package.json` files so the MindState core loader can determine which ones should be loaded on execution.
