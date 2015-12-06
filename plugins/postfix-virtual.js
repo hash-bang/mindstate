@@ -1,5 +1,6 @@
 var async = require('async-chainable');
 var colors = require('colors');
+var copy = require('copy');
 var fs = require('fs');
 
 module.exports = {

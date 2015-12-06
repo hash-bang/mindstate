@@ -3,6 +3,7 @@ var async = require('async-chainable');
 var asyncExec = require('async-chainable-exec');
 var colors = require('colors');
 var fs = require('fs');
+var which = require('which');
 
 module.exports = {
 	name: 'mysql',
@@ -13,10 +14,17 @@ module.exports = {
 		async()
 			.use(asyncExec)
 			.set('outFile', 'mysql.sql')
+			.then('binPath', function(next) {
+				which('mysqldump', next);
+			})
 			.then(function(next) {
 				// Sanity checks {{{
 				if (!mindstate.config.mysql.enabled) {
 					if (mindstate.program.verbose) console.log(colors.grey('MySQL backup is disabled'));
+					return next('SKIP');
+				}
+				if (!this.binPath) {
+					if (mindstate.program.verbose) console.log(colors.grey('`mysqldump` is not in PATH'));
 					return next('SKIP');
 				}
 				next();
