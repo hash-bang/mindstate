@@ -6,9 +6,9 @@ var fs = require('fs');
 module.exports = {
 	name: 'postfix-virtual',
 	description: 'Backup PostFix\'s virtuals config',
-	backup: function(finish) {
+	backup: function(finish, workspace) {
 		async()
-			.set('outFile', 'postfix-virtual')
+			.set('outFile', workspace.dir + '/virtual')
 			.then(function(next) {
 				// Sanity checks {{{
 				if (!mindstate.config.postfixVirtual.enabled) {
@@ -26,7 +26,7 @@ module.exports = {
 			})
 			.then(function(next) {
 				if (mindstate.program.verbose) console.log(colors.grey('Backup', mindstate.config.postfixVirtual.path));
-				copy('/etc/postfix/virtual', mindstate.tempDir + '/' + this.outFile, next);
+				copy('/etc/postfix/virtual', this.outFile, next);
 			})
 			.end(finish);
 	},

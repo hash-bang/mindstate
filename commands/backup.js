@@ -2,6 +2,7 @@ var _ = require('lodash');
 var async = require('async-chainable');
 var colors = require('colors');
 var del = require('del');
+var fs = require('fs');
 var tarGz = require('tar.gz');
 var temp = require('temp');
 var rsync = require('rsync');
@@ -22,11 +23,29 @@ module.exports = function(finish) {
 		.then(mindstate.functions.loadConfig)
 
 		// Execute each plugin {{{
-		.forEach(mindstate.plugins, function(next, plugin) {
-			plugin.backup(function(err) {
-				if (err == 'SKIP') return next(); // Ignore skipped plugins
-				return next(err);
-			});
+		.forEach(mindstate.plugins, function(nextPlugin, plugin) {
+			async()
+				.then('workspace', function(next) {
+					// Setup workspace {{{
+					var workspaceDir = mindstate.tempDir + '/' + plugin.name;
+					fs.mkdir(workspaceDir, function(err) {
+						if (err) return next(err);
+						next(null, {
+							name: plugin.name,
+							dir: workspaceDir,
+						});
+					});
+					// }}}
+				})
+				.then(function(next) {
+					// Execute Plugin {{{
+					plugin.backup(function(err) {
+						if (err == 'SKIP') return next(); // Ignore skipped plugins
+						return next(err);
+					}, this.workspace);
+					// }}}
+				})
+				.end(nextPlugin);
 		})
 		// }}}
 

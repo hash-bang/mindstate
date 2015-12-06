@@ -8,12 +8,11 @@ var which = require('which');
 module.exports = {
 	name: 'mysql',
 	description: 'Backup all MySQL databases',
-	backup: function(finish) {
-		var outStream = fs.createWriteStream(mindstate.tempDir + '/mysql.sql');
+	backup: function(finish, workspace) {
+		var outStream = fs.createWriteStream(workspace.dir + '/databases.sql');
 
 		async()
 			.use(asyncExec)
-			.set('outFile', 'mysql.sql')
 			.then(function(next) {
 				// Sanity checks {{{
 				if (!mindstate.config.mysql.enabled) {

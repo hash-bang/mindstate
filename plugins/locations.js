@@ -6,7 +6,7 @@ var copy = require('copy');
 module.exports = {
 	name: 'locations',
 	description: 'Backup specified on-disk directories',
-	backup: function(finish) {
+	backup: function(finish, workspace) {
 		async()
 			.then(function(next) {
 				// Sanity checks {{{
@@ -23,7 +23,7 @@ module.exports = {
 				// }}}
 			})
 			.forEach(mindstate.config.locations.dir, function(next, dir) {
-				copy.dir(dir, mindstate.tempDir + '/files/' + dir, next);
+				copy.dir(dir, workspace.dir + '/' + dir, next);
 			})
 			.then(function(next) {
 				if (mindstate.program.verbose) console.log(colors.blue('[Locations]'), colors.cyan(mindstate.config.locations.dir.length), 'paths copied');

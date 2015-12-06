@@ -4,7 +4,7 @@ var async = require('async-chainable');
 module.exports = {
 	name: 'acme',
 	description: 'A description of what this plugin does',
-	backup: function(finish) {
+	backup: function(finish, workspace) {
 		async()
 			.then(function(next) {
 				// Sanity checks {{{
@@ -16,7 +16,8 @@ module.exports = {
 				// }}}
 			})
 			.then(function(next) {
-				// Do something here
+				// Do something here - like write a file to the workspace
+				fs.writeFile('Hello World', workspace.dir + '/hello.txt', next);
 				next();
 			})
 			.end(finish);

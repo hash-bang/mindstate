@@ -8,7 +8,7 @@ var which = require('which');
 module.exports = {
 	name: 'mongodb',
 	description: 'Backup all MongoDB databases',
-	backup: function(finish) {
+	backup: function(finish, workspace) {
 		async()
 			.use(asyncExec)
 			.then('binPath', function(next) {
