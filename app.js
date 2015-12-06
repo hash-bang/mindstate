@@ -4,7 +4,6 @@ var _ = require('lodash').mixin(require('lodash-deep'));
 var async = require('async-chainable');
 var availableVersions = require('available-versions');
 var childProcess = require('child_process');
-var cliTable = require('cli-table');
 var colors = require('colors');
 var copy = require('copy');
 var del = require('del');
@@ -20,6 +19,7 @@ var npm = require('npm');
 var os = require('os');
 var program = require('commander');
 var rsync = require('rsync');
+var table = require('table').default;
 var tarGz = require('tar.gz');
 var temp = require('temp');
 var untildify = require('untildify');
@@ -107,10 +107,36 @@ function baseConfig(finish) {
 		},
 		style: {
 			date: 'YYYY-DD-MM HH:mm',
-			table: {
+			tableX: {
 				chars: {'mid': '', 'left-mid': '', 'mid-mid': '', 'right-mid': ''}, // See https://github.com/Automattic/cli-table#custom-styles
 				layout: {'padding-left': 1, 'padding-right': 1, head: ['blue'], border: ['grey'], compact : false},
-			}
+			},
+			table: {
+				columnDefault: {
+					paddingLeft: 1,
+					paddingRight: 1,
+				},
+				border: {
+					topBody: `─`,
+					topJoin: `┬`,
+					topLeft: `┌`,
+					topRight: `┐`,
+
+					bottomBody: `─`,
+					bottomJoin: `┴`,
+					bottomLeft: `└`,
+					bottomRight: `┘`,
+
+					bodyLeft: `│`,
+					bodyRight: `│`,
+					bodyJoin: `│`,
+
+					joinBody: `─`,
+					joinLeft: `├`,
+					joinRight: `┤`,
+					joinJoin: `┼`
+				},
+			},
 		},
 		list: {
 			patternFilter: true,
@@ -435,41 +461,60 @@ if (program.dump) {
 				return process.exit(1);
 			}
 
+			var compiledPattern = new RegExp(config.list.pattern);
+
+			var data = Array.prototype.concat.apply(
+				// Header {{{
+				[
+					['#', 'Name', 'Date', 'Size'].map(function(i) { return colors.blue(i) })
+				],
+				// }}}
+				// Body {{{
+				[this.list
+					.sort(function(a, b) {
+						if (a.name > b.name) {
+							return -1;
+						} else if (a.name < b.name) {
+							return 1;
+						} else {
+							return 0;
+						}
+					})
+					.filter(function(item) {
+						return (
+							!config.list.patternFilter ||
+							compiledPattern.test(item.name)
+						);
+					})
+					.map(function(file, offset) {
+						return [
+							(offset + 1),
+							file.name,
+							moment(Date.parse(file.date)).format(config.style.date),
+							file.size,
+						];
+					})
+				]
+				// }}}
+			);
+
 			// Render table {{{
-			var table = new cliTable({
+			console.log(table(data,
+				_.defaults(config.style.table, {
+					columns: {
+					},
+					drawHorizontalLine: function(index, size) { 
+						return (index == 0 || index == 1 || index == size);
+					},
+				})
+			));
+			/*var table = new cliTable({
 				head: ['#', 'Name', 'Date', 'Size'],
 				chars: config.style.table.chars,
 				style: config.style.table.layout,
 			});
-
-			var compiledPattern = new RegExp(config.list.pattern);
-
-			this.list
-				.sort(function(a, b) {
-					if (a.name > b.name) {
-						return -1;
-					} else if (a.name < b.name) {
-						return 1;
-					} else {
-						return 0;
-					}
-				})
-				.filter(function(item) {
-					return (
-						!config.list.patternFilter ||
-						compiledPattern.test(item.name)
-					);
-				})
-				.forEach(function(file, offset) {
-					table.push([
-						(offset + 1),
-						file.name,
-						moment(Date.parse(file.date)).format(config.style.date),
-						file.size,
-					]);
-				});
-
 			console.log(table.length ? table.toString() : 'Nothing to display');
+			*/
 			// }}}
 
 			process.exit(0);
