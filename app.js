@@ -118,8 +118,8 @@ mindstate.functions.baseConfig = function(finish) {
 		style: {
 			date: 'YYYY-DD-MM HH:mm',
 			table: {
-				chars: {'mid': '', 'left-mid': '', 'mid-mid': '', 'right-mid': ''}, // See https://github.com/Automattic/cli-table#custom-styles
-				layout: {'padding-left': 1, 'padding-right': 1, head: ['blue'], border: ['grey'], compact : false},
+				chars: {'mid': '', 'left-mid': '', 'mid-mid': '', 'right-mid': ''}, // See https://www.npmjs.com/package/cli-table2#custom-styles
+				layout: {'padding-left': 1, 'padding-right': 1, head: ['blue'], border: ['grey'], compact: false},
 			}
 		},
 		list: {
@@ -158,6 +158,15 @@ mindstate.functions.loadConfig = function(finish) {
 				mindstate.config = newConfig;
 				next();
 			});
+		})
+		.then(function(next) {
+			// Post decoration {{{
+			// cliTable2 is really picky that padding-left / padding-right is an int {{{
+			mindstate.config.style.table.layout['padding-left'] = parseInt(mindstate.config.style.table.layout['padding-left']);
+			mindstate.config.style.table.layout['padding-right'] = parseInt(mindstate.config.style.table.layout['padding-right']);
+			// }}}
+			next();
+			// }}}
 		})
 		.end(finish);
 }

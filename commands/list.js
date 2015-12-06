@@ -1,6 +1,6 @@
 var _ = require('lodash');
 var async = require('async-chainable');
-var cliTable = require('cli-table');
+var cliTable = require('cli-table2');
 var fs = require('fs');
 var homedir = require('homedir');
 var moment = require('moment');
