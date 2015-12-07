@@ -4,45 +4,11 @@ var cliTable = require('cli-table2');
 var fs = require('fs');
 var homedir = require('homedir');
 var moment = require('moment');
-var sftpjs = require('sftpjs');
 
 module.exports = function(finish) {
 	async()
 		.then(mindstate.functions.loadConfig)
-		.then('privateKey', function(next) {
-			if (mindstate.config.server.password) return next(); // Use plaintext password instead
-
-			async()
-				.set('keyPath', homedir() + '/.ssh/id_rsa')
-				.then('keyStat', function(next) {
-					fs.stat(this.keyPath, next);
-				})
-				.then('keyContent', function(next) {
-					fs.readFile(this.keyPath, next);
-				})
-				.end(function(err) {
-					if (err) return next(null, undefined); // Key not found or failed to read
-					if (mindstate.program.verbose) console.log(colors.grey('Using local private key'));
-					next(null, this.keyContent);
-				});
-		})
-		.then(function(next) {
-			this.client = sftpjs()
-				.on('error', next)
-				.on('ready', function() {
-					if (mindstate.program.verbose) console.log(colors.grey('SSH host connected'));
-					next();
-				})
-				.connect({
-					host: 'zapp.mfdc.biz',
-					username: 'backups',
-					password: _.get(mindstate.config, 'server.password', undefined),
-					privateKey: this.privateKey || undefined,
-					debug: mindstate.program.verbose ? function(d) { // Install debugger to spew SSH output if in verbose mode
-						console.log(colors.grey('[SSH]', d));
-					} : undefined,
-				});
-		})
+		.then('client', mindstate.functions.connect)
 		.then('list', function(next) {
 			this.client.list('/home/backups/backups', true, next);
 		})

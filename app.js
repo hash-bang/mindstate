@@ -10,6 +10,7 @@ var mustache = require('mustache');
 var os = require('os');
 var program = require('commander');
 var requireDir = require('require-dir');
+var sftpjs = require('sftpjs');
 
 // Module config {{{
 mustache.escape = function(v) { return v }; // Disable Mustache HTML escaping
@@ -170,7 +171,53 @@ mindstate.functions.loadConfig = function(finish) {
 			// }}}
 		})
 		.end(finish);
-}
+};
+
+/**
+* Connect to an SSH server and return an SFTP client
+* @param function finish(err, client) Callback to invoke on completion
+*/
+mindstate.functions.connect = function(finish) {
+	async()
+		.then('privateKey', function(next) {
+			if (mindstate.config.server.password) return next(); // Use plaintext password instead
+
+			async()
+				.set('keyPath', homedir() + '/.ssh/id_rsa')
+				.then('keyStat', function(next) {
+					fs.stat(this.keyPath, next);
+				})
+				.then('keyContent', function(next) {
+					fs.readFile(this.keyPath, next);
+				})
+				.end(function(err) {
+					if (err) return next(null, undefined); // Key not found or failed to read
+					if (mindstate.program.verbose) console.log(colors.grey('Using local private key'));
+					next(null, this.keyContent);
+				});
+		})
+		.then(function(next) {
+			this.client = sftpjs()
+				.on('error', next)
+				.on('ready', function() {
+					if (mindstate.program.verbose) console.log(colors.grey('SSH host connected'));
+					next();
+				})
+				.connect({
+					host: 'zapp.mfdc.biz',
+					username: 'backups',
+					password: _.get(mindstate.config, 'server.password', undefined),
+					privateKey: this.privateKey || undefined,
+					debug: mindstate.program.verbose ? function(d) { // Install debugger to spew SSH output if in verbose mode
+						console.log(colors.grey('[SSH]', d));
+					} : undefined,
+				});
+		})
+		.end(function(err) {
+			if (err) return finish(err);
+			finish(null, this.client);
+		});
+};
 // }}}
 
 

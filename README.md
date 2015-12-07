@@ -43,7 +43,7 @@ The easiest way to get MindState to perform periodic backups is to install it as
 
 Manual backups
 --------------
-You can perform manual backups, which can be useful for testing, by running:
+You can perform manual backups, which can be useful for testing by running:
 
 	mindstate --backup
 
