@@ -31,6 +31,7 @@ program
 	.option('--list', 'List server backups')
 	.option('--setup', 'Initalize config')
 	.option('--update', 'Attempt to update the MindState client + plugins')
+	.option('--delete [item]', 'Delete a remote mindstate. Can be used multiple times', function(i, v) { v.push(i); return v }, [])
 	.option('-v, --verbose', 'Be verbose')
 	.option('--plugin [plugin]', 'Specify the plugins to use manually. Can be used multiple times', function(i, v) { v.push(i); return v }, [])
 	.option('--no-color', 'Disable colors')
@@ -223,6 +224,7 @@ mindstate.functions.connect = function(finish) {
 
 var commands = {
 	backup: require('./commands/backup'),
+	delete: require('./commands/delete'),
 	dump: require('./commands/dump'),
 	dumpComputed: require('./commands/dumpComputed'),
 	list: require('./commands/list'),
@@ -254,6 +256,10 @@ async()
 	.then(function(next) {
 		if (!program.list) return next();
 		commands.list(next);
+	})
+	.then(function(next) {
+		if (!program.delete) return next();
+		commands.delete(next);
 	})
 	.end(function(err) {
 		if (err) {
