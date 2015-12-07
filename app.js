@@ -258,7 +258,7 @@ async()
 		commands.list(next);
 	})
 	.then(function(next) {
-		if (!program.delete) return next();
+		if (!program.delete || !program.delete.length) return next();
 		commands.delete(next);
 	})
 	.end(function(err) {

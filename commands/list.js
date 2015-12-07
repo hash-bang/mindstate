@@ -1,6 +1,7 @@
 var _ = require('lodash');
 var async = require('async-chainable');
 var cliTable = require('cli-table2');
+var filesize = require('filesize');
 var fs = require('fs');
 var homedir = require('homedir');
 var moment = require('moment');
@@ -43,7 +44,7 @@ module.exports = function(finish) {
 						(offset + 1),
 						file.name,
 						moment(Date.parse(file.date)).format(mindstate.config.style.date),
-						file.size,
+						filesize(file.size),
 					]);
 				});
 
