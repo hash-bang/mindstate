@@ -14,7 +14,7 @@ module.exports = function(finish) {
 		.then('baseConfig', function(next) {
 			mindstate.functions.baseConfig(function(err, baseConfig) {
 				if (err) return next(err);
-				next(null, _.defaults(mindstate.config, baseConfig));
+				next(null, baseConfig);
 			});
 		})
 		.then(function(next) {
@@ -42,31 +42,25 @@ module.exports = function(finish) {
 						if (mindstate.configFile == '/etc/mindstate') return 0;
 						if (/\.mindstate$/.test(mindstate.configFile)) return 1;
 						if (/mindstate\.config$/.test(mindstate.configFile)) return 2;
-						return undefined;
+						return 1;
 					}(),
 				},
 				{
 					type: 'input',
 					name: 'serverAddress',
 					message: 'Enter the SSH server you wish to backup to (optional `username@` prefix)',
-					default: mindstate.config.server.address,
-				},
-				{
-					type: 'input',
-					name: 'filename',
-					message: 'Enter the prefered filename of the backup tarballs',
-					default: '{{os.hostname}}-{{date.year}}-{{date.month}}-{{date.day}}-{{date.hour}}:{{date.minute}}.tar.gz',
+					default: _.get(mindstate.config, 'server.address') || this.baseConfig.server.address,
 				},
 				{
 					type: 'input',
 					name: 'extraDirs',
 					message: 'Enter any additional directories to backup seperated with commas',
-					default: mindstate.config.locations.dir.join(', '),
+					default: _.get(mindstate.config, 'locations.dir', []).join(', '),
 				},
 			], function(answers) {
 				iniPath = answers.iniLocation;
 
-				_.merge(this.baseConfig, {
+				_.merge(mindstate.config, {
 					server: {
 						address: answers.serverAddress,
 						filename: answers.filename,
