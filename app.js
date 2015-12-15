@@ -225,7 +225,7 @@ mindstate.functions.connect = function(finish) {
 * @param function finish(err, client) Callback to invoke on completion
 * @param object client Active SFTP client
 * @param object options Additional options to pass
-* @param boolean options.sort What file aspect (same as stat) to sort by
+* @param boolean options.sort What file aspect (same as stat) to sort by (e.g. name, size, date, owner, group)
 */
 mindstate.functions.list = function(finish, client, options) {
 	var settings = _.defaults(options, {
@@ -235,19 +235,29 @@ mindstate.functions.list = function(finish, client, options) {
 	client.list('/home/backups/backups', true, function(err, files) {
 		if (err) return finish(err);
 
-		var compiledPattern = new RegExp(mindstate.config.list.pattern);
+		// Convert all dates into JS objects {{{
+		files = files.map(function(file) {
+			file.date = new Date(file.date);
+			return file;
+		});
+		// }}}
 
+		// Apply sorting (optional) {{{
 		if (settings.sort) {
 			files.sort(function(a, b) {
 				if (a[settings.sort] > b[settings.sort]) {
-					return -1;
-				} else if (a[settings.sort] < b[settings.sort]) {
 					return 1;
+				} else if (a[settings.sort] < b[settings.sort]) {
+					return -1;
 				} else {
 					return 0;
 				}
 			});
 		}
+		// }}}
+
+		// Filter files by mindstate.config.list.patternFilter {{{
+		var compiledPattern = new RegExp(mindstate.config.list.pattern);
 
 		files = files.filter(function(item) {
 			return (
@@ -255,6 +265,7 @@ mindstate.functions.list = function(finish, client, options) {
 				compiledPattern.test(item.name)
 			);
 		});
+		// }}}
 
 		finish(null, files);
 	});

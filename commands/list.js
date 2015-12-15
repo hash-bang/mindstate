@@ -27,7 +27,7 @@ module.exports = function(finish) {
 				table.push([
 					(offset + 1),
 					file.name,
-					moment(Date.parse(file.date)).format(mindstate.config.style.date),
+					moment(file.date).format(mindstate.config.style.date),
 					filesize(file.size),
 				]);
 			});
