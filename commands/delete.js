@@ -7,33 +7,8 @@ module.exports = function(finish) {
 		.then(mindstate.functions.loadConfig)
 		.then('client', mindstate.functions.connect)
 		.then('list', function(next) {
-			// Get listing of available mindstates {{{
 			if (mindstate.program.verbose) console.log('Requesting list of MindStates');
-			this.client.list('/home/backups/backups', true, function(err, list) {
-				if (err) return next(err);
-
-				var compiledPattern = new RegExp(mindstate.config.list.pattern);
-
-				list = list
-					.sort(function(a, b) {
-						if (a.name > b.name) {
-							return -1;
-						} else if (a.name < b.name) {
-							return 1;
-						} else {
-							return 0;
-						}
-					})
-					.filter(function(item) {
-						return (
-							!mindstate.config.list.patternFilter ||
-							compiledPattern.test(item.name)
-						);
-					});
-
-				next(null, list);
-			});
-			// }}}
+			mindstate.functions.list(next, this.client);
 		})
 		.then(function(next) {
 			// Filter by items we should delete {{{

@@ -219,6 +219,46 @@ mindstate.functions.connect = function(finish) {
 			finish(null, this.client);
 		});
 };
+
+/**
+* Use an active connection to get a list of files from the server
+* @param function finish(err, client) Callback to invoke on completion
+* @param object client Active SFTP client
+* @param object options Additional options to pass
+* @param boolean options.sort What file aspect (same as stat) to sort by
+*/
+mindstate.functions.list = function(finish, client, options) {
+	var settings = _.defaults(options, {
+		sort: 'name',
+	});
+
+	client.list('/home/backups/backups', true, function(err, files) {
+		if (err) return finish(err);
+
+		var compiledPattern = new RegExp(mindstate.config.list.pattern);
+
+		if (settings.sort) {
+			files.sort(function(a, b) {
+				if (a[settings.sort] > b[settings.sort]) {
+					return -1;
+				} else if (a[settings.sort] < b[settings.sort]) {
+					return 1;
+				} else {
+					return 0;
+				}
+			});
+		}
+
+		files = files.filter(function(item) {
+			return (
+				!mindstate.config.list.patternFilter ||
+				compiledPattern.test(item.name)
+			);
+		});
+
+		finish(null, files);
+	});
+};
 // }}}
 
 
