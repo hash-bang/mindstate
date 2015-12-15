@@ -128,6 +128,7 @@ mindstate.functions.baseConfig = function(finish) {
 		list: {
 			patternFilter: true,
 			pattern: '^(.*)-([0-9]{4})-([0-9]{2})-([0-9]{2})-([0-9]{2}):([0-9]{2}).tar.gz$',
+			patternServer: '^<<server>>-([0-9]{4})-([0-9]{2})-([0-9]{2})-([0-9]{2}):([0-9]{2}).tar.gz$',
 		},
 	});
 }
@@ -226,10 +227,12 @@ mindstate.functions.connect = function(finish) {
 * @param object client Active SFTP client
 * @param object options Additional options to pass
 * @param boolean options.sort What file aspect (same as stat) to sort by (e.g. name, size, date, owner, group)
+* @param boolean options.server Limit output to only this server
 */
 mindstate.functions.list = function(finish, client, options) {
 	var settings = _.defaults(options, {
 		sort: 'name',
+		server: false,
 	});
 
 	client.list('/home/backups/backups', true, function(err, files) {
@@ -257,7 +260,12 @@ mindstate.functions.list = function(finish, client, options) {
 		// }}}
 
 		// Filter files by mindstate.config.list.patternFilter {{{
-		var compiledPattern = new RegExp(mindstate.config.list.pattern);
+		var compiledPattern;
+		if (settings.server) { // Filter by specific server
+			compiledPattern = new RegExp(mustache.render('{{=<< >>=}}' + mindstate.config.list.patternServer, {server: os.hostname()}));
+		} else {
+			compiledPattern = new RegExp(mindstate.config.list.pattern);
+		}
 
 		files = files.filter(function(item) {
 			return (
