@@ -114,6 +114,10 @@ mindstate.functions.baseConfig = function(finish) {
 			address: 'backups@zapp.mfdc.biz:~/backups/',
 			filename: '{{os.hostname}}-{{date.year}}-{{date.month}}-{{date.day}}-{{date.hour}}:{{date.minute}}.tar.gz',
 			// password: String, // Paintext password during SSH - do not do this. Use private keys instead
+
+			// Temporary values - these should be calculated from 'address'
+			dir: '/home/backups/backups',
+			username: 'backups',
 		},
 		locations: {
 			dir: [],
@@ -207,7 +211,7 @@ mindstate.functions.connect = function(finish) {
 				})
 				.connect({
 					host: 'zapp.mfdc.biz',
-					username: 'backups',
+					username: mindstate.config.server.username,
 					password: _.get(mindstate.config, 'server.password', undefined),
 					privateKey: this.privateKey || undefined,
 					debug: mindstate.program.verbose ? function(d) { // Install debugger to spew SSH output if in verbose mode
@@ -235,7 +239,7 @@ mindstate.functions.list = function(finish, client, options) {
 		server: false,
 	});
 
-	client.list('/home/backups/backups', true, function(err, files) {
+	client.list(mindstate.config.server.dir, true, function(err, files) {
 		if (err) return finish(err);
 
 		// Convert all dates into JS objects {{{

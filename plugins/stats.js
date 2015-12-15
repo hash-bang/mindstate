@@ -54,7 +54,7 @@ module.exports = {
 					})
 					.end(function(err) {
 						if (err == 'NOBIN') {
-							// Disguard binary not found messages
+							// Ignore binary not found messages
 							return nextCommand();
 						} else {
 							return nextCommand(err);
