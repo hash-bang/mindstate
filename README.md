@@ -17,6 +17,13 @@ MindState is an easy to use backup program that runs on a server and periodicall
 * Postfix-Virtual - backup the Postfix virtual email table
 
 
+**Features:**
+
+* Pluggable interface allowing easy addition of new functionality and backup items
+* Management of backup archives from any connected client (see `--list` and `--delete` for examples)
+* Delta support - minimal transfers to the server will reduce the bandwidth even if backups are frequent
+
+
 Installation & Setup
 ====================
 Install MindState using the usual NPM global install:
@@ -55,7 +62,7 @@ Writing MindState plugins
 =========================
 The MindState plugin system is designed to make it as simple as possible to add functionality.
 
-In essence each plugin, when run is provided with its own workspace - a writable directory on disk - anything placed in this directory is folded into the MindState backup. Each plugin is expected to expose at least a `backup()` function which writes to this location asyncronosly, returning execution to the main process on completion.
+In essence each plugin, when run is provided with its own workspace - a writable directory on disk - anything placed in this directory is folded into the MindState backup. Each plugin is expected to expose at least a `backup()` function which writes to this location asynchronously, returning execution to the main process on completion.
 
 A plugin can optionally also expose a `restore()` method which performs the reverse action - taking a workspace and restoring the state of the machine from it.
 
