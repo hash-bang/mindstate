@@ -69,6 +69,68 @@ module.exports = function(finish) {
 		})
 		// }}}
 
+		// Prepare all file paths {{{
+		.then(function(next) {
+			this.destPrefix = _.trimRight(mindstate.config.server.address, '/') + '/';
+			this.destFile = mindstate.config.server.filename;
+			next();
+		})
+		// }}}
+
+		// Delta prepare {{{
+		// Attempt to get the latest backup and copy it to the new file name
+		// Using this method Rsync can do a differencial on the last backup and hopefully not have to transfer as much on each nightly
+		.then(function(next) {
+			if (!mindstate.program.upload) return next();
+
+			async()
+				.set('destFile', this.destFile)
+				.then('client', mindstate.functions.connect)
+				.then('list', function(next) {
+					mindstate.functions.list(next, this.client, {
+						sort: 'date',
+						server: true,
+					});
+				})
+				.then('latest', function(next) { // Clip the last file
+					var latest = _.last(this.list);
+					if (!this.list.length) return next('SKIP');
+					if (latest.name == this.destFile) {
+						console.log(colors.grey('Delta file would be same name as current timestamp, skipping delta copy stage'));
+						console.log(colors.grey('This should only occur if you are attempting extremely frequent backups without a second / microsecond marker in the output filename'));
+						return next('SKIP');
+					}
+					next(null, latest);
+				})
+				.then(function(next) {
+					var cmd = 'cp "' + mindstate.config.server.dir + '/' + this.latest.name + '" "' + mindstate.config.server.dir + '/' + this.destFile + '"';
+					if (mindstate.program.verbose) console.log(colors.grey('[SSH/cp]', 'run', cmd));
+
+					this.client.conn.exec(cmd, function(err, stream) {
+						if (err) return next(err);
+						stream
+							.on('close', function(code) {
+								if (mindstate.program.verbose) console.log(colors.grey('[SSH/cp]', 'Exit with code', code));
+								next(code == 0 ? undefined : 'SSH/cp exit code ' + code);
+							})
+							.on('data', function(data) {
+								if (mindstate.program.verbose) console.log(colors.grey('[SSH/cp]', data.toString()));
+							})
+							.stderr.on('data', function(data) {
+								if (mindstate.program.verbose) console.log(colors.grey('[SSH/cp]', data.toString()));
+							});
+					});
+				})
+				.end(function(err) {
+					if (err == 'SKIP') {
+						return next();
+					} else {
+						return next(err);
+					}
+				});
+		})
+		// }}}
+
 		// Rsync {{{
 		.then(function(next) {
 			if (!mindstate.program.upload) {
@@ -80,14 +142,17 @@ module.exports = function(finish) {
 				.archive()
 				.compress()
 				.source(this.tarPath)
-				.destination(_.trimRight(mindstate.config.server.address, '/') + '/' + mindstate.config.server.filename)
+				.destination(this.destPrefix + this.destFile)
 				.output(function(data) {
 					console.log(colors.blue('[RSYNC]'), data.toString());
 				}, function(err) {
 					console.log(colors.blue('[RSYNC]'), colors.red('Error:', data.toString()));
 				});
 
-			if (mindstate.program.verbose) console.log(colors.grey('Begin RSYNC', rsyncInst.command()));
+			if (mindstate.program.verbose) {
+				rsyncInst.progress(); // Enable progress reporting
+				console.log(colors.grey('Begin RSYNC', rsyncInst.command()));
+			}
 
 			rsyncInst.execute(next);
 		})
