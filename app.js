@@ -25,13 +25,13 @@ var version = require('./package.json').version;
 
 program
 	.version(version)
-	.option('--backup', 'Perform a backup')
+	.option('-b, --backup', 'Perform a backup')
 	.option('--dump', 'Dump config')
 	.option('--dump-computed', 'Dump config (also showing default values)')
-	.option('--list', 'List server backups')
+	.option('-l, --list', 'List server backups')
 	.option('--setup', 'Initalize config')
-	.option('--update', 'Attempt to update the MindState client + plugins')
-	.option('--delete [item]', 'Delete a remote mindstate. Can be used multiple times', function(i, v) { v.push(i); return v }, [])
+	.option('-u, --update', 'Attempt to update the MindState client + plugins')
+	.option('-d, --delete [item]', 'Delete a remote mindstate. Can be used multiple times', function(i, v) { v.push(i); return v }, [])
 	.option('-v, --verbose', 'Be verbose')
 	.option('--plugin [plugin]', 'Specify the plugins to use manually. Can be used multiple times', function(i, v) { v.push(i); return v }, [])
 	.option('--no-color', 'Disable colors')
