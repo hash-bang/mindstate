@@ -70,6 +70,7 @@ module.exports = {
 				commands: {
 					top: 'top -Sb -n1',
 					inxi: 'inxi -Fs -c0',
+					dpkg: 'dpkg -l',
 				},
 			},
 		});
