@@ -10,6 +10,7 @@ var mustache = require('mustache');
 var os = require('os');
 var program = require('commander');
 var requireDir = require('require-dir');
+var sshParse = require('ssh-parse');
 var sftpjs = require('sftpjs');
 
 // Module config {{{
@@ -115,8 +116,8 @@ mindstate.functions.baseConfig = function(finish) {
 			filename: '{{os.hostname}}-{{date.year}}-{{date.month}}-{{date.day}}-{{date.hour}}:{{date.minute}}:{{date.second}}.tar.gz',
 			// password: String, // Plaintext password during SSH - do not do this. Use private keys instead
 
-			// Temporary values - these should be calculated from 'address'
-			dir: '/home/backups/backups',
+			// Temporary values - these will be replaced with the parsed contents of server.address via NPM:ssh-parse
+			dir: '~',
 			username: 'backups',
 		},
 		locations: {
@@ -173,6 +174,12 @@ mindstate.functions.loadConfig = function(finish) {
 			mindstate.config.style.table.layout['padding-left'] = parseInt(mindstate.config.style.table.layout['padding-left']);
 			mindstate.config.style.table.layout['padding-right'] = parseInt(mindstate.config.style.table.layout['padding-right']);
 			// }}}
+			// Populate server.{dir,username} from server.address {{{
+			var sshParsed = sshParse(mindstate.config.server.address);
+			if (!sshParsed) return next('Invalid server address');
+			mindstate.config.server.dir = _.trimRight(sshParsed.pathname, '/');
+			mindstate.config.server.username = sshParsed.auth;
+			// }}}
 			next();
 			// }}}
 		})
@@ -219,8 +226,31 @@ mindstate.functions.connect = function(finish) {
 					} : undefined,
 				});
 		})
+		.then('env', function(next) {
+			if (mindstate.program.verbose > 1) console.log(colors.blue('[SSH/env]'), 'Retrieving remote environment config');
+			this.client.conn.exec('env', function(err, stream) {
+				var envBlock = '';
+
+				if (err) return next(err);
+				stream
+					.on('close', function(code) {
+						if (mindstate.program.verbose > 2) console.log(colors.blue('[SSH/env]'), 'Exit with code', colors.cyan(code));
+						var remoteEnv = {};
+						var lineSplitter = /^(.*?)=(.*)$/;
+						envBlock.split(/\s*\n\s*/).forEach(function(line) { // Parse all environment strings into remoteEnv
+							var bits = lineSplitter.exec(line);
+							if (bits) remoteEnv[bits[1]] = bits[2];
+						});
+						next(err ? 'Env exited with code ' + code : undefined, remoteEnv);
+					})
+					.on('data', function(data) {
+						envBlock += data.toString();
+					});
+			});
+		})
 		.end(function(err) {
 			if (err) return finish(err);
+			this.client.env = this.env; // Glue this.env -> this.client.env
 			finish(null, this.client);
 		});
 };
@@ -239,48 +269,81 @@ mindstate.functions.list = function(finish, client, options) {
 		server: false,
 	});
 
-	client.list(mindstate.config.server.dir, true, function(err, files) {
-		if (err) return finish(err);
+	async()
+		.then('realpath', function(next) {
+			mindstate.functions.realpath(next, client, mindstate.config.server.dir);
+		})
+		.then('files', function(next) {
+			client.list(this.realpath, true, function(err, files) {
+				if (err) return next(err);
 
-		// Convert all dates into JS objects {{{
-		files = files.map(function(file) {
-			file.date = new Date(file.date);
-			return file;
-		});
-		// }}}
+				// Convert all dates into JS objects {{{
+				files = files.map(function(file) {
+					file.date = new Date(file.date);
+					return file;
+				});
+				// }}}
 
-		// Apply sorting (optional) {{{
-		if (settings.sort) {
-			files.sort(function(a, b) {
-				if (a[settings.sort] > b[settings.sort]) {
-					return 1;
-				} else if (a[settings.sort] < b[settings.sort]) {
-					return -1;
-				} else {
-					return 0;
+				// Apply sorting (optional) {{{
+				if (settings.sort) {
+					files.sort(function(a, b) {
+						if (a[settings.sort] > b[settings.sort]) {
+							return 1;
+						} else if (a[settings.sort] < b[settings.sort]) {
+							return -1;
+						} else {
+							return 0;
+						}
+					});
 				}
+				// }}}
+
+				// Filter files by mindstate.config.list.patternFilter {{{
+				var compiledPattern;
+				if (settings.server) { // Filter by specific server
+					compiledPattern = new RegExp(mustache.render('{{=<< >>=}}' + mindstate.config.list.patternServer, {server: os.hostname().toLowerCase()}));
+				} else {
+					compiledPattern = new RegExp(mindstate.config.list.pattern);
+				}
+
+				files = files.filter(function(item) {
+					return (
+						!mindstate.config.list.patternFilter ||
+						compiledPattern.test(item.name)
+					);
+				});
+				// }}}
+				next(null, files);
 			});
-		}
-		// }}}
-
-		// Filter files by mindstate.config.list.patternFilter {{{
-		var compiledPattern;
-		if (settings.server) { // Filter by specific server
-			compiledPattern = new RegExp(mustache.render('{{=<< >>=}}' + mindstate.config.list.patternServer, {server: os.hostname()}));
-		} else {
-			compiledPattern = new RegExp(mindstate.config.list.pattern);
-		}
-
-		files = files.filter(function(item) {
-			return (
-				!mindstate.config.list.patternFilter ||
-				compiledPattern.test(item.name)
-			);
+		})
+		.end(function(err) {
+			if (err) return finish(err);
+			finish(null, this.files);
 		});
-		// }}}
+};
 
-		finish(null, files);
-	});
+/**
+* Translate a shorthand path into a real one using the servers environment variables
+* This really just translates paths like '~/somewhere' into the full path using the HOME variable available from the remote server
+* @param function finish(err, path) Callback to invoke on completion
+* @param object client Active SFTP client
+* @param string path The path to evaluate
+*/
+mindstate.functions.realpath = function(finish, client, path) {
+	// User HOME + dir style (e.g. '~/dir') - use HOME + USER + path
+	if (/^~\//.test(path)) {
+		if (!client.env.HOME) return finish('No remote HOME env available');
+		if (!client.env.USER) return finish('No remote USER env available');
+		return finish(null, client.env.HOME + path.substr(1));
+	}
+
+	// User HOME style (e.g. '~user/dir') - use HOME + path
+	if (/^~(.*)/.test(path)) {
+		return finish('Currently unsupported path style: ' + path);
+	}
+
+	// Probably already a real path
+	return finish(null, path);
 };
 // }}}
 
