@@ -2,6 +2,8 @@ var _ = require('lodash');
 var async = require('async-chainable');
 var colors = require('colors');
 var del = require('del');
+var fileEmitter = require('file-emitter');
+var filesize = require('filesize');
 var fs = require('fs');
 var tarGz = require('tar.gz');
 var temp = require('temp');
@@ -61,11 +63,42 @@ module.exports = function(finish) {
 		})
 		// }}}
 
+		// Show dir stats {{{
+		.then(function(next) {
+			if (!mindstate.program.verbose) return next();
+
+			var fileCount = 0;
+			var totalSize = 0;
+
+			fileEmitter(mindstate.tempDir)
+				.on('file', function(file) {
+					fileCount++;
+					totalSize += file.stats.size;
+				})
+				.on('end', function() {
+					console.log(colors.blue('[Stats]'), 'File count of backup =', colors.cyan(fileCount));
+					console.log(colors.blue('[Stats]'), 'Total size of backup =', colors.cyan(filesize(totalSize)));
+					next();
+				});
+		})
+		// }}}
+
 		// Create tarball {{{
 		.then(function(next) {
-			this.tarPath = temp.path({suffix: '.tar'});
-			if (mindstate.program.verbose) console.log(colors.grey('Creating Tarball', this.tarPath));
-			new tarGz().compress(mindstate.tempDir, this.tarPath, next);
+			mindstate.tarPath = temp.path({suffix: '.tar'});
+			if (mindstate.program.verbose) console.log(colors.grey('Creating Tarball', mindstate.tarPath));
+			new tarGz().compress(mindstate.tempDir, mindstate.tarPath, next);
+		})
+		// }}}
+
+		// Show tarball stats {{{
+		.then(function(next) {
+			if (!mindstate.program.verbose) return next();
+			fs.stat(mindstate.tarPath, function(err, stats) {
+				if (err) return next(err);
+				console.log(colors.blue('[Stats]'), 'Size of comrpessed tarball =', colors.cyan(filesize(stats.size)));
+				next();
+			});
 		})
 		// }}}
 
@@ -141,7 +174,7 @@ module.exports = function(finish) {
 			var rsyncInst = new rsync()
 				.archive()
 				.compress()
-				.source(this.tarPath)
+				.source(mindstate.tarPath)
 				.destination(this.destPrefix + this.destFile)
 				.output(function(data) {
 					console.log(colors.blue('[RSYNC]'), data.toString());
@@ -170,7 +203,7 @@ module.exports = function(finish) {
 				}
 			}
 
-			if (this.tarPath) {
+			if (mindstate.tarPath) {
 				if (!mindstate.program.clean) {
 					console.log(colors.grey('Cleaner: Skipping tarball cleanup for', this.tarPath));
 				} else {
