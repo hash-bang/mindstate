@@ -24,7 +24,7 @@ module.exports = function(finish) {
 		.set('deleted', 0)
 		.forEach('list', function(nextItem, item) {
 			var self = this;
-			if (mindstate.program.verbose) console.log('Delete', colors.cyan(item.name));
+			if (mindstate.program.verbose) console.log(colors.blue('[Delete]'), colors.cyan(item.name));
 			this.client.delete('/home/backups/backups' + '/' + item.name, function(err) {
 				if (err) return next(err);
 				self.deleted++;
@@ -32,7 +32,7 @@ module.exports = function(finish) {
 			});
 		})
 		.then(function(next) {
-			if (mindstate.program.verbose) console.log('Deleted', colors.cyan(this.deleted), 'MindStates');
+			if (mindstate.program.verbose) console.log(colors.blue('[Delete]'), 'Deleted', colors.cyan(this.deleted), 'MindStates');
 			next();
 		})
 		.end(finish);

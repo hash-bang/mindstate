@@ -63,7 +63,7 @@ var iniFile = _(iniLocations)
 if (iniFile) {
 	config = ini.parse(fs.readFileSync(iniFile, 'utf-8'));
 } else if (!program.setup) {
-	console.log(colors.red('No settings file found. Use `mindstate --setup` to set one up'));
+	console.log(colors.red('ERROR', 'No settings file found. Use `mindstate --setup` to set one up'));
 	process.exit(1);
 }
 // }}}
@@ -198,7 +198,7 @@ mindstate.functions.connect = function(finish) {
 				})
 				.end(function(err) {
 					if (err) return next(null, undefined); // Key not found or failed to read
-					if (mindstate.program.verbose) console.log(colors.grey('Using local private key'));
+					if (mindstate.program.verbose) console.log(colors.blue('[SSH]'), 'Using local private key');
 					next(null, this.keyContent);
 				});
 		})
@@ -206,7 +206,7 @@ mindstate.functions.connect = function(finish) {
 			this.client = sftpjs()
 				.on('error', next)
 				.on('ready', function() {
-					if (mindstate.program.verbose) console.log(colors.grey('SSH host connected'));
+					if (mindstate.program.verbose) console.log(colors.blue('[SSH]'), 'Connected');
 					next();
 				})
 				.connect({
@@ -326,7 +326,7 @@ async()
 	})
 	.end(function(err) {
 		if (err) {
-			console.log(colors.red('ERROR:'), err.toString());
+			console.log(colors.red('ERROR'), err.toString());
 			return process.exit(1);
 		}
 		process.exit(0);

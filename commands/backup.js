@@ -129,28 +129,28 @@ module.exports = function(finish) {
 					var latest = _.last(this.list);
 					if (!this.list.length) return next('SKIP');
 					if (latest.name == this.destFile) {
-						console.log(colors.grey('Delta file would be same name as current timestamp, skipping delta copy stage'));
-						console.log(colors.grey('This should only occur if you are attempting extremely frequent backups without a second / microsecond marker in the output filename'));
+						console.log(colors.blue('[Delta]'), 'Delta file would be same name as current timestamp, skipping delta copy stage');
+						console.log(colors.blue('[Delta]'), 'This should only occur if you are attempting extremely frequent backups without a second / microsecond marker in the output filename');
 						return next('SKIP');
 					}
 					next(null, latest);
 				})
 				.then(function(next) {
 					var cmd = 'cp "' + mindstate.config.server.dir + '/' + this.latest.name + '" "' + mindstate.config.server.dir + '/' + this.destFile + '"';
-					if (mindstate.program.verbose) console.log(colors.grey('[SSH/cp]', 'run', cmd));
+					if (mindstate.program.verbose) console.log(colors.blue('[Delta/SSH/cp]'), 'Run', cmd);
 
 					this.client.conn.exec(cmd, function(err, stream) {
 						if (err) return next(err);
 						stream
 							.on('close', function(code) {
-								if (mindstate.program.verbose) console.log(colors.grey('[SSH/cp]', 'Exit with code', code));
+								if (mindstate.program.verbose) console.log(colors.blue('[Delta/SSH/cp]'), 'Exit with code', colors.cyan(code));
 								next(code == 0 ? undefined : 'SSH/cp exit code ' + code);
 							})
 							.on('data', function(data) {
-								if (mindstate.program.verbose) console.log(colors.grey('[SSH/cp]', data.toString()));
+								if (mindstate.program.verbose) console.log(colors.blue('[Delta/SSH/cp]'), data.toString());
 							})
 							.stderr.on('data', function(data) {
-								if (mindstate.program.verbose) console.log(colors.grey('[SSH/cp]', data.toString()));
+								if (mindstate.program.verbose) console.log(colors.blue('[Delta/SSH/cp]'), data.toString());
 							});
 					});
 				})
@@ -167,7 +167,7 @@ module.exports = function(finish) {
 		// Rsync {{{
 		.then(function(next) {
 			if (!mindstate.program.upload) {
-				console.log(colors.grey('Upload stage skipped'));
+				console.log(colors.blue('[RSYNC]'), 'Upload stage skipped');
 				return next();
 			}
 
@@ -177,14 +177,14 @@ module.exports = function(finish) {
 				.source(mindstate.tarPath)
 				.destination(this.destPrefix + this.destFile)
 				.output(function(data) {
-					console.log(colors.blue('[RSYNC]'), data.toString());
+					console.log(colors.blue('[RSYNC]'), '1>', data.toString());
 				}, function(err) {
-					console.log(colors.blue('[RSYNC]'), colors.red('Error:', data.toString()));
+					console.log(colors.blue('[RSYNC]'), '2>', colors.red('ERROR', data.toString()));
 				});
 
 			if (mindstate.program.verbose) {
 				rsyncInst.progress(); // Enable progress reporting
-				console.log(colors.grey('Begin RSYNC', rsyncInst.command()));
+				console.log(colors.blue('[RSYNC]'), 'Run', rsyncInst.command());
 			}
 
 			rsyncInst.execute(next);
@@ -193,22 +193,22 @@ module.exports = function(finish) {
 
 		// Cleanup + end {{{
 		.end(function(err) {
-			// Cleaner {{{
+			// Cleanup {{{
 			if (mindstate.tempDir) {
 				if (!mindstate.program.clean) {
-					console.log(colors.grey('Cleaner: Skipping temp directory cleanup for', mindstate.tempDir));
+					console.log(colors.blue('[Cleanup]'), 'Skipping temp directory cleanup for', colors.cyan(mindstate.tempDir));
 				} else {
-					if (mindstate.program.verbose) console.log(colors.grey('Cleaner: Cleaning up temp directory', mindstate.tempDir));
+					if (mindstate.program.verbose) console.log(colors.blue('[Cleanup]'), 'Delete temp directory', colors.cyan(mindstate.tempDir));
 					del.sync(mindstate.tempDir, {force: true});
 				}
 			}
 
 			if (mindstate.tarPath) {
 				if (!mindstate.program.clean) {
-					console.log(colors.grey('Cleaner: Skipping tarball cleanup for', this.tarPath));
+					console.log(colors.blue('[Cleanup]'), 'Skipping tarball cleanup for', colors.cyan(mindstate.tarPath));
 				} else {
-					if (mindstate.program.verbose) console.log(colors.grey('Cleaner: Cleaning up tarball', this.tarPath));
-					del.sync(this.tarPath, {force: true});
+					if (mindstate.program.verbose) console.log(colors.blue('[Cleanup]'), 'Cleaning up tarball', colors.cyan(mindstate.tarPath));
+					del.sync(mindstate.tarPath, {force: true});
 				}
 			}
 			// }}}
