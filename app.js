@@ -39,7 +39,7 @@ program
 	.option('--no-upload', 'Skip the upload stage')
 	.parse(process.argv);
 
-// Load plugins, ensure its unique and remove anythng if --plugin is specified
+// Load plugins, ensure its unique and remove anything if --plugin is specified
 var plugins = _(requireDir('./plugins', {camelcase: true}))
 	.map(function(contents, mod) { return contents })
 	.uniq(false, 'name')
@@ -113,7 +113,7 @@ mindstate.functions.baseConfig = function(finish) {
 		server: {
 			address: 'backups@zapp.mfdc.biz:~/backups/',
 			filename: '{{os.hostname}}-{{date.year}}-{{date.month}}-{{date.day}}-{{date.hour}}:{{date.minute}}.tar.gz',
-			// password: String, // Paintext password during SSH - do not do this. Use private keys instead
+			// password: String, // Plaintext password during SSH - do not do this. Use private keys instead
 
 			// Temporary values - these should be calculated from 'address'
 			dir: '/home/backups/backups',
