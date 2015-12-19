@@ -8,7 +8,7 @@ var ini = require('ini');
 var inquirer = require('inquirer');
 var untildify = require('untildify');
 
-module.exports = function(finish) {
+module.exports = function(finish, settings) {
 	var iniPath;
 	async()
 		.then('baseConfig', function(next) {

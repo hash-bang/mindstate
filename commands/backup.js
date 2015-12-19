@@ -10,13 +10,23 @@ var tar = require('tar-fs');
 var temp = require('temp');
 var rsync = require('rsync');
 
-module.exports = function(finish) {
+module.exports = function(finish, settings) {
 	async()
+		// Defaults {{{
+		.then(function(next) {
+			_.defaults(settings, {
+				clean: true,
+				upload: true,
+			});
+			next();
+		})
+		// }}}
+
 		// Setup tempDir {{{
 		.then(function(next) {
 			temp.mkdir({prefix: 'mindstate-'}, function(err, dir) {
 				if (err) return next(err);
-				if (mindstate.program.verbose > 2) console.log('Using temp directory:', dir);
+				if (mindstate.verbose > 2) console.log('Using temp directory:', dir);
 				mindstate.tempDir = dir;
 				next();
 			});
@@ -31,7 +41,7 @@ module.exports = function(finish) {
 				.then(function(next) {
 					// Plugin sanity checks {{{
 					if (!_.isFunction(plugin.backup)) {
-						if (mindstate.program.verbose) console.log('Plugin', plugin.name, 'does not support backup');
+						if (mindstate.verbose) console.log('Plugin', plugin.name, 'does not support backup');
 						return next('SKIP');
 					}
 					next();
@@ -66,7 +76,7 @@ module.exports = function(finish) {
 
 		// Show dir stats {{{
 		.then(function(next) {
-			if (!mindstate.program.verbose) return next();
+			if (!mindstate.verbose) return next();
 
 			var fileCount = 0;
 			var totalSize = 0;
@@ -87,7 +97,7 @@ module.exports = function(finish) {
 		// Create tarball {{{
 		.then(function(next) {
 			mindstate.tarPath = temp.path({suffix: '.tar'});
-			if (mindstate.program.verbose > 2) console.log(colors.blue('[Tar]'), 'Creating Tarball', colors.cyan(mindstate.tarPath));
+			if (mindstate.verbose > 2) console.log(colors.blue('[Tar]'), 'Creating Tarball', colors.cyan(mindstate.tarPath));
 
 			/**
 			* Setup a pipeline for the following:
@@ -115,7 +125,7 @@ module.exports = function(finish) {
 			tar
 				.pack(mindstate.tempDir, {
 					map: function(file) {
-						if (mindstate.program.verbose > 1) console.log(colors.blue('[Tar]'), colors.cyan(file.name));
+						if (mindstate.verbose > 1) console.log(colors.blue('[Tar]'), colors.cyan(file.name));
 						return file;
 					},
 				})
@@ -125,7 +135,7 @@ module.exports = function(finish) {
 
 		// Show tarball stats {{{
 		.then(function(next) {
-			if (!mindstate.program.verbose) return next();
+			if (!mindstate.verbose) return next();
 			var self = this;
 			fs.stat(mindstate.tarPath, function(err, stats) {
 				if (err) return next(err);
@@ -148,7 +158,7 @@ module.exports = function(finish) {
 		// Attempt to get the latest backup and copy it to the new file name
 		// Using this method Rsync can do a differencial on the last backup and hopefully not have to transfer as much on each nightly
 		.then(function(next) {
-			if (!mindstate.program.upload) return next();
+			if (!settings.upload) return next();
 
 			async()
 				.set('destFile', this.destFile)
@@ -171,20 +181,20 @@ module.exports = function(finish) {
 				})
 				.then(function(next) {
 					var cmd = 'cp "' + mindstate.config.server.dir + '/' + this.latest.name + '" "' + mindstate.config.server.dir + '/' + this.destFile + '"';
-					if (mindstate.program.verbose) console.log(colors.blue('[Delta/SSH/cp]'), 'Run', cmd);
+					if (mindstate.verbose) console.log(colors.blue('[Delta/SSH/cp]'), 'Run', cmd);
 
 					this.client.conn.exec(cmd, function(err, stream) {
 						if (err) return next(err);
 						stream
 							.on('close', function(code) {
-								if (mindstate.program.verbose) console.log(colors.blue('[Delta/SSH/cp]'), 'Exit with code', colors.cyan(code));
+								if (mindstate.verbose) console.log(colors.blue('[Delta/SSH/cp]'), 'Exit with code', colors.cyan(code));
 								next(code == 0 ? undefined : 'SSH/cp exit code ' + code);
 							})
 							.on('data', function(data) {
-								if (mindstate.program.verbose) console.log(colors.blue('[Delta/SSH/cp]'), data.toString());
+								if (mindstate.verbose) console.log(colors.blue('[Delta/SSH/cp]'), data.toString());
 							})
 							.stderr.on('data', function(data) {
-								if (mindstate.program.verbose) console.log(colors.blue('[Delta/SSH/cp]'), data.toString());
+								if (mindstate.verbose) console.log(colors.blue('[Delta/SSH/cp]'), data.toString());
 							});
 					});
 				})
@@ -200,7 +210,7 @@ module.exports = function(finish) {
 
 		// Rsync {{{
 		.then(function(next) {
-			if (!mindstate.program.upload) {
+			if (!settings.upload) {
 				console.log(colors.blue('[RSYNC]'), 'Upload stage skipped');
 				return next();
 			}
@@ -214,10 +224,10 @@ module.exports = function(finish) {
 				.source(mindstate.tarPath)
 				.destination(this.destPrefix + this.destFile)
 				.output(function(data) {
-					if (!mindstate.program.verbose) return;
+					if (!mindstate.verbose) return;
 
 					var dataStr = data.toString();
-					if (mindstate.program.verbose > 2) console.log(colors.blue('[RSYNC]'), '1>', dataStr);
+					if (mindstate.verbose > 2) console.log(colors.blue('[RSYNC]'), '1>', dataStr);
 					var bytesSent = /^total bytes sent: (.*?)$/im.exec(dataStr);
 					if (bytesSent) { // Looks like the Bytes-sent block
 						var bytesSentInt = parseInt(bytesSent[1].replace(',', ''));
@@ -225,10 +235,10 @@ module.exports = function(finish) {
 						if (self.tarBallSize) console.log(colors.blue('[Stats]'), 'Bytes transmitted =', colors.cyan(Math.ceil((bytesSentInt / self.tarBallSize) * 100)), '%');
 					}
 				}, function(err) {
-					if (mindstate.program.verbose > 2) console.log(colors.blue('[RSYNC]'), '2>', colors.red('ERROR', data.toString()));
+					if (mindstate.verbose > 2) console.log(colors.blue('[RSYNC]'), '2>', colors.red('ERROR', data.toString()));
 				});
 
-			if (mindstate.program.verbose > 1) {
+			if (mindstate.verbose > 1) {
 				rsyncInst.progress(); // Enable progress reporting
 				console.log(colors.blue('[RSYNC]'), 'Run', rsyncInst.command());
 			}
@@ -241,19 +251,19 @@ module.exports = function(finish) {
 		.end(function(err) {
 			// Cleanup {{{
 			if (mindstate.tempDir) {
-				if (!mindstate.program.clean) {
+				if (!settings.clean) {
 					console.log(colors.blue('[Cleanup]'), 'Skipping temp directory cleanup for', colors.cyan(mindstate.tempDir));
 				} else {
-					if (mindstate.program.verbose) console.log(colors.blue('[Cleanup]'), 'Delete temp directory', colors.cyan(mindstate.tempDir));
+					if (mindstate.verbose) console.log(colors.blue('[Cleanup]'), 'Delete temp directory', colors.cyan(mindstate.tempDir));
 					del.sync(mindstate.tempDir, {force: true});
 				}
 			}
 
 			if (mindstate.tarPath) {
-				if (!mindstate.program.clean) {
+				if (!settings.clean) {
 					console.log(colors.blue('[Cleanup]'), 'Skipping tarball cleanup for', colors.cyan(mindstate.tarPath));
 				} else {
-					if (mindstate.program.verbose) console.log(colors.blue('[Cleanup]'), 'Cleaning up tarball', colors.cyan(mindstate.tarPath));
+					if (mindstate.verbose) console.log(colors.blue('[Cleanup]'), 'Cleaning up tarball', colors.cyan(mindstate.tarPath));
 					del.sync(mindstate.tarPath, {force: true});
 				}
 			}

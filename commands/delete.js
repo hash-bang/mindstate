@@ -2,19 +2,27 @@ var _ = require('lodash');
 var async = require('async-chainable');
 var colors = require('colors');
 
-module.exports = function(finish) {
+module.exports = function(finish, settings) {
 	async()
+		.then(function(next) {
+			// Defaults {{{
+			_.defaults(settings, {
+				mindstates: [],
+			});
+			next();
+			// }}}
+		})
 		.then(mindstate.functions.loadConfig)
 		.then('client', mindstate.functions.connect)
 		.then('list', function(next) {
-			if (mindstate.program.verbose) console.log('Requesting list of MindStates');
+			if (mindstate.verbose) console.log('Requesting list of MindStates');
 			mindstate.functions.list(next, this.client);
 		})
 		.then(function(next) {
 			// Filter by items we should delete {{{
 			this.list = this.list
 				.filter(function(item) {
-					return (_.contains(mindstate.program.delete, item.name));
+					return (_.contains(settings.mindstates, item.name));
 				});
 			// }}}
 			// FIXME: Would be nice if we could also specify the index or range here using something like [range-parser2](https://www.npmjs.com/package/range-parser2)
@@ -24,7 +32,7 @@ module.exports = function(finish) {
 		.set('deleted', 0)
 		.forEach('list', function(nextItem, item) {
 			var self = this;
-			if (mindstate.program.verbose) console.log(colors.blue('[Delete]'), colors.cyan(item.name));
+			if (mindstate.verbose) console.log(colors.blue('[Delete]'), colors.cyan(item.name));
 			this.client.delete('/home/backups/backups' + '/' + item.name, function(err) {
 				if (err) return next(err);
 				self.deleted++;
@@ -32,7 +40,7 @@ module.exports = function(finish) {
 			});
 		})
 		.then(function(next) {
-			if (mindstate.program.verbose) console.log(colors.blue('[Delete]'), 'Deleted', colors.cyan(this.deleted), 'MindStates');
+			if (mindstate.verbose) console.log(colors.blue('[Delete]'), 'Deleted', colors.cyan(this.deleted), 'MindStates');
 			next();
 		})
 		.end(finish);

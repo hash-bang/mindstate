@@ -5,12 +5,12 @@ var colors = require('colors');
 var moduleFinder = require('module-finder');
 var npm = require('npm');
 
-module.exports = function(finish) {
+module.exports = function(finish, settings) {
 	async()
 		.set('modules', [])
 		.then(mindstate.loadConfig)
 		.then('modules', function(next) { // Find list of modules to update
-			if (mindstate.program.verbose) console.log(colors.blue('[Update]'), 'Querying installed global modules');
+			if (mindstate.verbose) console.log(colors.blue('[Update]'), 'Querying installed global modules');
 			moduleFinder({
 				global: true,
 				filter: {
@@ -18,7 +18,7 @@ module.exports = function(finish) {
 				},
 			})
 				.then(function(modules) {
-					if (mindstate.program.verbose) console.log(colors.blue('[Update]'), 'Found', modules.length, 'mindstate modules');
+					if (mindstate.verbose) console.log(colors.blue('[Update]'), 'Found', modules.length, 'mindstate modules');
 					next(null, modules);
 				}, function(err) {
 					next(err);
@@ -35,7 +35,7 @@ module.exports = function(finish) {
 				});
 		})
 		.then(function(next) {
-			if (!mindstate.program.verbose) return next();
+			if (!mindstate.verbose) return next();
 
 			// Render table {{{
 			var table = new cliTable({
@@ -67,11 +67,11 @@ module.exports = function(finish) {
 
 			npm.load({global: true}, function(err) {
 				if (err) return next(err);
-				if (mindstate.program.verbose) console.log(colors.blue('[NPM]'), 'install', installable.map(function(i) { return colors.cyan(i) }).join(' '));
+				if (mindstate.verbose) console.log(colors.blue('[NPM]'), 'install', installable.map(function(i) { return colors.cyan(i) }).join(' '));
 
 				npm.commands.install(installable, function(err, data) {
 					if (err) return next(err);
-					if (mindstate.program.verbose > 2) console.log(colors.blue('[NPM]'), '>', data);
+					if (mindstate.verbose > 2) console.log(colors.blue('[NPM]'), '>', data);
 					next();
 				});
 			});

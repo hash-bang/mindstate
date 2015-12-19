@@ -1,6 +1,6 @@
 var async = require('async-chainable');
 
-module.exports = function(finish) {
+module.exports = function(finish, settings) {
 	async()
 		.then(mindstate.functions.loadConfig)
 		.then(function(next) {
