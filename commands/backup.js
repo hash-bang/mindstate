@@ -1,11 +1,12 @@
 var _ = require('lodash');
 var async = require('async-chainable');
+var childProcess = require('child_process');
 var colors = require('colors');
 var del = require('del');
 var fileEmitter = require('file-emitter');
 var filesize = require('filesize');
 var fs = require('fs');
-var tarGz = require('targz');
+var tar = require('tar-fs');
 var temp = require('temp');
 var rsync = require('rsync');
 
@@ -87,16 +88,38 @@ module.exports = function(finish) {
 		.then(function(next) {
 			mindstate.tarPath = temp.path({suffix: '.tar'});
 			if (mindstate.program.verbose > 2) console.log(colors.blue('[Tar]'), 'Creating Tarball', colors.cyan(mindstate.tarPath));
-			tarGz.compress({
-				src: mindstate.tempDir,
-				dest: mindstate.tarPath,
-				tar: {
+
+			/**
+			* Setup a pipeline for the following:
+			*
+			* 1. Stream: Tar bundler
+			* 2. Process: gzip --resyncable --stdout
+			* 3. File Stream: mindstate.tarPath
+			*
+			* Annoyingly we can't just use something like the NPM modules `tar.gz` / `targz` etc. as they all implement zlip which does not yet support `--resyncable` which protects the compression cypher from being scrambled - allowing RSYNC to perform delta compression even though there is a 1% overhead
+			* - MC 2015-12-19
+			*/
+
+
+			var tarFile = fs.createWriteStream(mindstate.tarPath);
+			var gzip = childProcess.spawn('gzip', ['--rsyncable', '--stdout']);
+			gzip.stdout.pipe(tarFile);
+			tarFile.on('close', function(err) {
+				next();
+			});
+			gzip.on('close', function(code) {
+				if (code == 0) return;
+				console.log(colors.blue('[Tar]'), colors.red('Gzip exited with code', code));
+			});
+
+			tar
+				.pack(mindstate.tempDir, {
 					map: function(file) {
 						if (mindstate.program.verbose > 1) console.log(colors.blue('[Tar]'), colors.cyan(file.name));
 						return file;
 					},
-				},
-			}, next);
+				})
+				.pipe(gzip.stdin);
 		})
 		// }}}
 
