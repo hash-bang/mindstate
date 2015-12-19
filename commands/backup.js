@@ -172,6 +172,7 @@ module.exports = function(finish) {
 			}
 
 			var rsyncInst = new rsync()
+				.set('stats')
 				.archive()
 				.compress()
 				.source(mindstate.tarPath)
