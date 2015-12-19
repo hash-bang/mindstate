@@ -98,7 +98,7 @@ mindstate.functions.decorateConfig = function(finish) {
 				second: _.padLeft((new Date).getSeconds(), 2, '0'),
 			},
 			os: {
-				hostname: os.hostname(),
+				hostname: os.hostname().toLowerCase(),
 			},
 			tempDir: mindstate.tempDir,
 		});
@@ -112,7 +112,7 @@ mindstate.functions.baseConfig = function(finish) {
 	finish(null, {
 		server: {
 			address: 'backups@zapp.mfdc.biz:~/backups/',
-			filename: '{{os.hostname}}-{{date.year}}-{{date.month}}-{{date.day}}-{{date.hour}}:{{date.minute}}.tar.gz',
+			filename: '{{os.hostname}}-{{date.year}}-{{date.month}}-{{date.day}}-{{date.hour}}:{{date.minute}}:{{date.second}}.tar.gz',
 			// password: String, // Plaintext password during SSH - do not do this. Use private keys instead
 
 			// Temporary values - these should be calculated from 'address'
