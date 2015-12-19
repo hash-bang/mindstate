@@ -5,7 +5,7 @@ var del = require('del');
 var fileEmitter = require('file-emitter');
 var filesize = require('filesize');
 var fs = require('fs');
-var tarGz = require('tar.gz');
+var tarGz = require('targz');
 var temp = require('temp');
 var rsync = require('rsync');
 
@@ -86,8 +86,17 @@ module.exports = function(finish) {
 		// Create tarball {{{
 		.then(function(next) {
 			mindstate.tarPath = temp.path({suffix: '.tar'});
-			if (mindstate.program.verbose > 2) console.log('Creating Tarball', mindstate.tarPath);
-			new tarGz().compress(mindstate.tempDir, mindstate.tarPath, next);
+			if (mindstate.program.verbose > 2) console.log(colors.blue('[Tar]'), 'Creating Tarball', colors.cyan(mindstate.tarPath));
+			tarGz.compress({
+				src: mindstate.tempDir,
+				dest: mindstate.tarPath,
+				tar: {
+					map: function(file) {
+						if (mindstate.program.verbose > 1) console.log(colors.blue('[Tar]'), colors.cyan(file.name));
+						return file;
+					},
+				},
+			}, next);
 		})
 		// }}}
 
