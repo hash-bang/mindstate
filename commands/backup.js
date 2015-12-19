@@ -126,9 +126,11 @@ module.exports = function(finish) {
 		// Show tarball stats {{{
 		.then(function(next) {
 			if (!mindstate.program.verbose) return next();
+			var self = this;
 			fs.stat(mindstate.tarPath, function(err, stats) {
 				if (err) return next(err);
-				console.log(colors.blue('[Stats]'), 'Size of comrpessed tarball =', colors.cyan(filesize(stats.size)));
+				self.tarBallSize = stats.size;
+				console.log(colors.blue('[Stats]'), 'Size of compressed tarball =', colors.cyan(filesize(stats.size)));
 				next();
 			});
 		})
@@ -203,6 +205,8 @@ module.exports = function(finish) {
 				return next();
 			}
 
+			var self = this;
+
 			var rsyncInst = new rsync()
 				.set('stats')
 				.archive()
@@ -210,12 +214,21 @@ module.exports = function(finish) {
 				.source(mindstate.tarPath)
 				.destination(this.destPrefix + this.destFile)
 				.output(function(data) {
-					console.log(colors.blue('[RSYNC]'), '1>', data.toString());
+					if (!mindstate.program.verbose) return;
+
+					var dataStr = data.toString();
+					if (mindstate.program.verbose > 2) console.log(colors.blue('[RSYNC]'), '1>', dataStr);
+					var bytesSent = /^total bytes sent: (.*?)$/im.exec(dataStr);
+					if (bytesSent) { // Looks like the Bytes-sent block
+						var bytesSentInt = parseInt(bytesSent[1].replace(',', ''));
+						console.log(colors.blue('[Stats]'), 'Bytes sent =', colors.cyan(filesize(bytesSentInt)));
+						if (self.tarBallSize) console.log(colors.blue('[Stats]'), 'Bytes transmitted =', colors.cyan(Math.ceil((bytesSentInt / self.tarBallSize) * 100)), '%');
+					}
 				}, function(err) {
-					console.log(colors.blue('[RSYNC]'), '2>', colors.red('ERROR', data.toString()));
+					if (mindstate.program.verbose > 2) console.log(colors.blue('[RSYNC]'), '2>', colors.red('ERROR', data.toString()));
 				});
 
-			if (mindstate.program.verbose) {
+			if (mindstate.program.verbose > 1) {
 				rsyncInst.progress(); // Enable progress reporting
 				console.log(colors.blue('[RSYNC]'), 'Run', rsyncInst.command());
 			}
