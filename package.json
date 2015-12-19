@@ -11,6 +11,10 @@
     "backup",
     "mindstate"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hash-bang/mindstate"
+  },
   "author": "Matt Carter <m@ttcarter.com> (https://github.com/hash-bang)",
   "license": "MIT",
   "dependencies": {
