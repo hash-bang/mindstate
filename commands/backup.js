@@ -15,7 +15,7 @@ module.exports = function(finish) {
 		.then(function(next) {
 			temp.mkdir({prefix: 'mindstate-'}, function(err, dir) {
 				if (err) return next(err);
-				if (mindstate.program.verbose) console.log(colors.grey('Using temp directory:', dir));
+				if (mindstate.program.verbose > 2) console.log('Using temp directory:', dir);
 				mindstate.tempDir = dir;
 				next();
 			});
@@ -86,7 +86,7 @@ module.exports = function(finish) {
 		// Create tarball {{{
 		.then(function(next) {
 			mindstate.tarPath = temp.path({suffix: '.tar'});
-			if (mindstate.program.verbose) console.log(colors.grey('Creating Tarball', mindstate.tarPath));
+			if (mindstate.program.verbose > 2) console.log('Creating Tarball', mindstate.tarPath);
 			new tarGz().compress(mindstate.tempDir, mindstate.tarPath, next);
 		})
 		// }}}

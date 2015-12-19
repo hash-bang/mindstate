@@ -32,7 +32,7 @@ program
 	.option('--setup', 'Initalize config')
 	.option('-u, --update', 'Attempt to update the MindState client + plugins')
 	.option('-d, --delete [item]', 'Delete a remote mindstate. Can be used multiple times', function(i, v) { v.push(i); return v }, [])
-	.option('-v, --verbose', 'Be verbose')
+	.option('-v, --verbose', 'Be verbose. Specify multiple times for increasing verbosity', function(i, v) { return v + 1 }, 0)
 	.option('--plugin [plugin]', 'Specify the plugins to use manually. Can be used multiple times', function(i, v) { v.push(i); return v }, [])
 	.option('--no-color', 'Disable colors')
 	.option('--no-clean', 'Do not delete temp directory after backup')
@@ -214,8 +214,8 @@ mindstate.functions.connect = function(finish) {
 					username: mindstate.config.server.username,
 					password: _.get(mindstate.config, 'server.password', undefined),
 					privateKey: this.privateKey || undefined,
-					debug: mindstate.program.verbose ? function(d) { // Install debugger to spew SSH output if in verbose mode
-						console.log(colors.grey('[SSH]', d));
+					debug: mindstate.program.verbose > 2 ? function(d) { // Install debugger to spew SSH output if in `-vvv` verbose mode
+						console.log(colors.blue('[SSH]'), d);
 					} : undefined,
 				});
 		})

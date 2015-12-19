@@ -71,7 +71,7 @@ module.exports = function(finish) {
 
 				npm.commands.install(installable, function(err, data) {
 					if (err) return next(err);
-					console.log("DATA", data);
+					if (mindstate.program.verbose > 2) console.log(colors.blue('[NPM]'), '>', data);
 					next();
 				});
 			});
