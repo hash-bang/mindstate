@@ -184,7 +184,7 @@ module.exports = function(finish, settings) {
 						mindstate.functions.realpath(next, this.client, mindstate.config.server.dir + '/' + this.latest.name);
 					},
 					deltaDst: function(next) {
-						mindstate.functions.realpath(next, mindstate.config.server.dir + '/' + this.destFile);
+						mindstate.functions.realpath(next, this.client, mindstate.config.server.dir + '/' + this.destFile);
 					},
 				})
 				.then(function(next) {
