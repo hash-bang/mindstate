@@ -179,8 +179,16 @@ module.exports = function(finish, settings) {
 					}
 					next(null, latest);
 				})
+				.parallel({ // Calculate the delta source and dest paths
+					deltaSrc: function(next) {
+						mindstate.functions.realpath(next, this.client, mindstate.config.server.dir + '/' + this.latest.name);
+					},
+					deltaDst: function(next) {
+						mindstate.functions.realpath(next, mindstate.config.server.dir + '/' + this.destFile);
+					},
+				})
 				.then(function(next) {
-					var cmd = 'cp "' + mindstate.config.server.dir + '/' + this.latest.name + '" "' + mindstate.config.server.dir + '/' + this.destFile + '"';
+					var cmd = 'cp "' + this.deltaSrc + '" "' + this.deltaDst + '"';
 					if (mindstate.verbose) console.log(colors.blue('[Delta/SSH/cp]'), 'Run', cmd);
 
 					this.client.conn.exec(cmd, function(err, stream) {
