@@ -12,6 +12,7 @@ module.exports = function(finish, settings) {
 		.then('modules', function(next) { // Find list of modules to update
 			if (mindstate.verbose) console.log(colors.blue('[Update]'), 'Querying installed global modules');
 			moduleFinder({
+				local: true,
 				global: true,
 				filter: {
 					keywords: {'$in': 'mindstate'},

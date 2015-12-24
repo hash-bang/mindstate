@@ -4,6 +4,7 @@ var colors = require('colors');
 var homedir = require('homedir');
 var fs = require('fs');
 var ini = require('ini');
+var moduleFinder = require('module-finder');
 var mustache = require('mustache');
 var os = require('os');
 var requireDir = require('require-dir');
@@ -38,16 +39,37 @@ var mindstate = {
 
 // Global functions {{{
 mindstate.functions.loadPlugins = function(finish, filter) {
-	var plugins = _(requireDir('./plugins', {camelcase: true}))
-		.map(function(contents, mod) { return contents })
-		.uniq(false, 'name')
-		.filter(filter ? filter : function(plugin) { return true })
-		.value();
+	async()
+		.then('modules', function(next) {
+			moduleFinder({
+				global: true,
+				local: true,
+			}).then(function(modules) {
+				next(null, modules);
+			}, next);
+		})
+		.forEach('modules', function(next, module) {
+			if (module.pkg.name == 'mindstate') return next(); // Ignore this module
+			if (!module.pkg) return next('Module doesnt have package information: ' + module.toString());
+			if (!_.startsWith(module.pkg.name, 'mindstate-')) return next();
 
-	mindstate.plugins = plugins;
-
-	finish(null, plugins);
-
+			if (_.isFunction(filter)) { // Apply filters
+				var result = filter(module);
+				if (!result) return next();
+			}
+			try {
+				var loadedPlugin = require(module.pkg.name);
+				if (!loadedPlugin.name) return next('Plugin ' + module.pkg.name + ' did not return a name');
+				mindstate.plugins.push(loadedPlugin);
+				next();
+			} catch (e) {
+				next('Error loading module ' + module.pkg.name + ' - ' + e.toString());
+			}
+		})
+		.end(function(err) {
+			if (err) return finish(err);
+			finish(null, mindstate.plugins);
+		});
 };
 
 /**

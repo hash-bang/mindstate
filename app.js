@@ -39,13 +39,21 @@ async()
 		});
 	})
 	.then(function(next) {
-		mindstate.functions.loadPlugins(next, function(plugin) {
-			return (!program.plugin.length || _.contains(program.plugin, plugin.name));
+		mindstate.functions.loadPlugins(next, function(module) {
+			return !program.plugin.length || _.some(program.plugin, function(allowedPlugin) {
+				return _.endsWith(module.pkg.name, allowedPlugin);
+			});
 		});
 	})
 	.then(function(next) {
 		// Sanity checks {{{
-		if (!mindstate.plugins.length) return next('No plugins to run!');
+		if (
+			!mindstate.plugins.length && // No plugins AND
+			( // We are trying to...
+				program.backup ||
+				program.restore
+			)
+		) return next('No plugins to run!');
 		if (program.verbose) console.log('Using plugins:', mindstate.plugins.map(function(plugin) { return colors.cyan(plugin.name) }).join(', '));
 
 		next();
