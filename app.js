@@ -30,7 +30,6 @@ global.mindstate.verbose = program.verbose;
 async()
 	.then(function(next) {
 		mindstate.functions.loadConfig(next, function(err) {
-			console.log('LOAD');
 			if (err == 'No INI file to load') {
 				return next('No settings file found. Use `mindstate --setup` to set one up');
 			} else {
