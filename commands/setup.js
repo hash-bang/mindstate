@@ -6,6 +6,7 @@ var fs = require('fs');
 var homedir = require('homedir');
 var ini = require('ini');
 var inquirer = require('inquirer');
+var npm = require('npm');
 var untildify = require('untildify');
 
 module.exports = function(finish, settings) {
@@ -16,6 +17,61 @@ module.exports = function(finish, settings) {
 				if (err) return next(err);
 				next(null, baseConfig);
 			});
+		})
+		.then(function(next) {
+			// Check plugin config {{{
+			if (mindstate.plugins.length) return next(); // At least one installed
+			console.log('No Mindstate plugins found');
+			inquirer.prompt([
+				{
+					type: 'checkbox',
+					name: 'plugins',
+					message: 'What plugins do you want to install',
+					choices: [
+						{
+							name: 'Locations',
+							value: 'mindstate-plugin-locations',
+						},
+						{
+							name: 'MongoDB',
+							value: 'mindstate-plugin-mongodb',
+						},
+						{
+							name: 'MySQL',
+							value: 'mindstate-plugin-mysql',
+						},
+						{
+							name: 'Postfix-Virtual',
+							value: 'mindstate-postfix-virtual',
+						},
+						{
+							name: 'Stats',
+							value: 'mindstate-plugin-stats',
+						},
+					],
+					default: ['mindstate-plugin-locations', 'mindstate-plugin-stats'],
+				},
+			], function(answers) {
+				if (!answers.plugins.length) return next(); // Do nothing as nothing is selected
+
+				npm.load({global: true}, function(err) {
+					if (err) return next(err);
+					if (mindstate.verbose) console.log(colors.blue('[NPM]'), 'install', answers.plugins.map(function(i) { return colors.cyan(i) }).join(' '));
+
+					npm.commands.install(answers.plugins, function(err, data) {
+						if (err) return next(err);
+						if (mindstate.verbose > 2) console.log(colors.blue('[NPM]'), '>', data);
+
+						// Reload plugins
+						mindstate.functions.loadPlugins(next);
+					});
+				});
+			});
+			// }}}
+		})
+		.then(function(next) {
+			console.log('PLUGINS NOW PERSENT', _.pluck(mindstate.plugins, 'name'));
+			next();
 		})
 		.then(function(next) {
 			// server.address {{{
