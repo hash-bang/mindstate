@@ -230,7 +230,7 @@ mindstate.functions.connect = function(finish) {
 				})
 				.end(function(err) {
 					if (err) return next(null, undefined); // Key not found or failed to read
-					if (mindstate.program.verbose) console.log(colors.blue('[SSH]'), 'Using local private key');
+					if (mindstate.verbose) console.log(colors.blue('[SSH]'), 'Using local private key');
 					next(null, this.keyContent);
 				});
 		})
@@ -238,7 +238,7 @@ mindstate.functions.connect = function(finish) {
 			this.client = sftpjs()
 				.on('error', next)
 				.on('ready', function() {
-					if (mindstate.program.verbose) console.log(colors.blue('[SSH]'), 'Connected');
+					if (mindstate.verbose) console.log(colors.blue('[SSH]'), 'Connected');
 					next();
 				})
 				.connect({
@@ -246,20 +246,23 @@ mindstate.functions.connect = function(finish) {
 					username: mindstate.config.server.username,
 					password: _.get(mindstate.config, 'server.password', undefined),
 					privateKey: this.privateKey || undefined,
-					debug: mindstate.program.verbose > 2 ? function(d) { // Install debugger to spew SSH output if in `-vvv` verbose mode
+					debug: mindstate.verbose > 2 ? function(d) { // Install debugger to spew SSH output if in `-vvv` verbose mode
 						console.log(colors.blue('[SSH]'), d);
 					} : undefined,
 				});
+
+			// Also attach to raw SSH2 connection client so we catch things like timeouts
+			this.client.conn.on('error', next);
 		})
 		.then('env', function(next) {
-			if (mindstate.program.verbose > 1) console.log(colors.blue('[SSH/env]'), 'Retrieving remote environment config');
+			if (mindstate.verbose > 1) console.log(colors.blue('[SSH/env]'), 'Retrieving remote environment config');
 			this.client.conn.exec('env', function(err, stream) {
 				var envBlock = '';
 
 				if (err) return next(err);
 				stream
 					.on('close', function(code) {
-						if (mindstate.program.verbose > 2) console.log(colors.blue('[SSH/env]'), 'Exit with code', colors.cyan(code));
+						if (mindstate.verbose > 2) console.log(colors.blue('[SSH/env]'), 'Exit with code', colors.cyan(code));
 						var remoteEnv = {};
 						var lineSplitter = /^(.*?)=(.*)$/;
 						envBlock.split(/\s*\n\s*/).forEach(function(line) { // Parse all environment strings into remoteEnv
@@ -299,6 +302,7 @@ mindstate.functions.list = function(finish, client, options) {
 			mindstate.functions.realpath(next, client, mindstate.config.server.dir);
 		})
 		.then('files', function(next) {
+			if (mindstate.verbose > 1) console.log(colors.blue('[SSH/list]'), 'Asking for file listing for path', colors.cyan(this.realpath));
 			client.list(this.realpath, true, function(err, files) {
 				if (err) return next(err);
 
