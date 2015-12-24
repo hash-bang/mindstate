@@ -130,12 +130,12 @@ mindstate.functions.loadConfig = function(finish) {
 				next();
 			});
 		})
-		.forEach(mindstate.plugins, function(next, plugin) {
+		.forEach(mindstate.plugins, function(nextPlugin, plugin) {
 			if (!plugin.config) return nextPlugin();
 			plugin.config(function(err, pluginConfig) {
 				if (err) return next(err);
 				_.defaultsDeep(mindstate.config, pluginConfig);
-				next();
+				nextPlugin();
 			});
 		})
 		.then(function(next) {
