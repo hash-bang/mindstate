@@ -9,7 +9,7 @@ program
 	.version(require('./package.json').version)
 	.option('-b, --backup', 'Perform a backup')
 	.option('--dump', 'Dump config')
-	.option('--dump-computed', 'Dump config (also showing default values)')
+	.option('--dump-computed', 'Dump config (showing values after internal defaults merging + mustache processing)')
 	.option('-l, --list', 'List server backups')
 	.option('--setup', 'Initalize config')
 	.option('-u, --update', 'Attempt to update the MindState client + plugins')
