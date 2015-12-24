@@ -32,7 +32,7 @@ module.exports = {
 					.then('binPath', function(next) {
 						which(bin, function(err, path) {
 							if (err) {
-								if (mindstate.program.verbose) console.log(colors.grey('Stats binary command `' + bin + '` is not in PATH'));
+								if (mindstate.program.verbose > 1) console.log(colors.grey('Stats binary command `' + bin + '` is not in PATH'));
 								return next('NOBIN');
 							}
 							next(null, path);
