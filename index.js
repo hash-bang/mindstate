@@ -44,6 +44,7 @@ mindstate.functions.loadPlugins = function(finish, filter) {
 			moduleFinder({
 				global: true,
 				local: true,
+				cwd: __dirname,
 			}).then(function(modules) {
 				next(null, modules);
 			}, next);
