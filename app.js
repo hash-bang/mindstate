@@ -29,6 +29,7 @@ global.mindstate.verbose = program.verbose;
 
 async()
 	.then(function(next) {
+		if (mindstate.verbose > 2) console.log(colors.blue('[Mindstate]'), 'Loading INI config...');
 		mindstate.functions.loadConfig(next, function(err) {
 			if (err == 'No INI file to load') {
 				return next('No settings file found. Use `mindstate --setup` to set one up');
@@ -38,9 +39,12 @@ async()
 		});
 	})
 	.then(function(next) {
+		if (mindstate.verbose > 2) console.log(colors.blue('[Mindstate]'), 'Loading plugins...');
 		mindstate.functions.loadPlugins(next, function(module) {
 			return !program.plugin.length || _.some(program.plugin, function(allowedPlugin) {
-				return _.endsWith(module.pkg.name, allowedPlugin);
+				var usePlugin = _.endsWith(module.pkg.name, allowedPlugin);
+				if (!usePlugin && mindstate.verbose > 2) console.log(colors.blue('[Mindstate]'), 'Filtering out plugin', colors.cyan(module.pkg.name));
+				return usePlugin;
 			});
 		});
 	})
@@ -53,29 +57,34 @@ async()
 				program.restore
 			)
 		) return next('No plugins to run!');
-		if (program.verbose) console.log('Using plugins:', mindstate.plugins.map(function(plugin) { return colors.cyan(plugin.name) }).join(', '));
+		if (mindstate.verbose) console.log(colors.blue('[Mindstate]'), 'Using plugins:', mindstate.plugins.map(function(plugin) { return colors.cyan(plugin.name) }).join(', '));
 
 		next();
 		// }}}
 	})
 	.then(function(next) {
 		if (!program.update) return next();
+		if (mindstate.verbose > 2) console.log(colors.blue('[Mindstate]'), 'Performing operation:', colors.cyan('update'));
 		mindstate.commands.update(next);
 	})
 	.then(function(next) {
 		if (!program.dump) return next();
+		if (mindstate.verbose > 2) console.log(colors.blue('[Mindstate]'), 'Performing operation:', colors.cyan('dump'));
 		mindstate.commands.dump(next);
 	})
 	.then(function(next) {
 		if (!program.dumpComputed) return next();
+		if (mindstate.verbose > 2) console.log(colors.blue('[Mindstate]'), 'Performing operation:', colors.cyan('dumpComputed'));
 		mindstate.commands.dumpComputed(next);
 	})
 	.then(function(next) {
 		if (!program.setup) return next();
+		if (mindstate.verbose > 2) console.log(colors.blue('[Mindstate]'), 'Performing operation:', colors.cyan('setup'));
 		mindstate.commands.setup(next);
 	})
 	.then(function(next) {
 		if (!program.backup) return next();
+		if (mindstate.verbose > 2) console.log(colors.blue('[Mindstate]'), 'Performing operation:', colors.cyan('backup'));
 		mindstate.commands.backup(next, {
 			clean: program.clean,
 			upload: program.upload,
@@ -83,15 +92,18 @@ async()
 	})
 	.then(function(next) {
 		if (!program.list) return next();
+		if (mindstate.verbose > 2) console.log(colors.blue('[Mindstate]'), 'Performing operation:', colors.cyan('list'));
 		mindstate.commands.list(next);
 	})
 	.then(function(next) {
 		if (!program.delete || !program.delete.length) return next();
+		if (mindstate.verbose > 2) console.log(colors.blue('[Mindstate]'), 'Performing operation:', colors.cyan('delete'));
 		mindstate.commands.delete(next, {
 			mindstates: program.delete,
 		});
 	})
 	.end(function(err) {
+		if (mindstate.verbose > 2) console.log(colors.blue('[Mindstate]'), 'Done');
 		if (err) {
 			console.log(colors.red('ERROR'), err.toString());
 			return process.exit(1);
