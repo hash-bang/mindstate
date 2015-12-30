@@ -294,7 +294,7 @@ mindstate.functions.connect = function(finish) {
 * @param boolean options.server Limit output to only this server
 */
 mindstate.functions.list = function(finish, client, options) {
-	var settings = _.defaults(options, {
+	var settings = _.defaults(options || {}, {
 		sort: 'name',
 		server: false,
 	});
