@@ -176,6 +176,7 @@ mindstate.functions.loadConfig = function(finish) {
 			// Populate server.{dir,username} from server.address {{{
 			var sshParsed = sshParse(mindstate.config.server.address);
 			if (!sshParsed) return next('Invalid server address');
+			mindstate.config.server.hostname = sshParsed.hostname;
 			mindstate.config.server.dir = _.trimRight(sshParsed.pathname, '/');
 			mindstate.config.server.username = sshParsed.auth;
 			// }}}
@@ -243,7 +244,7 @@ mindstate.functions.connect = function(finish) {
 					next();
 				})
 				.connect({
-					host: 'zapp.mfdc.biz',
+					host: mindstate.config.server.hostname,
 					username: mindstate.config.server.username,
 					password: _.get(mindstate.config, 'server.password', undefined),
 					privateKey: this.privateKey || undefined,
