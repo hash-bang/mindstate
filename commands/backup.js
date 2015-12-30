@@ -87,8 +87,8 @@ module.exports = function(finish, settings) {
 					totalSize += file.stats.size;
 				})
 				.on('end', function() {
-					console.log(colors.blue('[Stats]'), 'File count of backup =', colors.cyan(fileCount));
-					console.log(colors.blue('[Stats]'), 'Total size of backup =', colors.cyan(filesize(totalSize)));
+					console.log(colors.blue('[Mindstate]'), 'File count of backup =', colors.cyan(fileCount));
+					console.log(colors.blue('[Mindstate]'), 'Total size of backup =', colors.cyan(filesize(totalSize)));
 					next();
 				});
 		})
@@ -140,7 +140,7 @@ module.exports = function(finish, settings) {
 			fs.stat(mindstate.tarPath, function(err, stats) {
 				if (err) return next(err);
 				self.tarBallSize = stats.size;
-				console.log(colors.blue('[Stats]'), 'Size of compressed tarball =', colors.cyan(filesize(stats.size)));
+				console.log(colors.blue('[Mindstate]'), 'Size of compressed tarball =', colors.cyan(filesize(stats.size)));
 				next();
 			});
 		})
@@ -239,8 +239,8 @@ module.exports = function(finish, settings) {
 					var bytesSent = /^total bytes sent: (.*?)$/im.exec(dataStr);
 					if (bytesSent) { // Looks like the Bytes-sent block
 						var bytesSentInt = parseInt(bytesSent[1].replace(',', ''));
-						console.log(colors.blue('[Stats]'), 'Bytes sent =', colors.cyan(filesize(bytesSentInt)));
-						if (self.tarBallSize) console.log(colors.blue('[Stats]'), 'Bytes transmitted =', colors.cyan(Math.ceil((bytesSentInt / self.tarBallSize) * 100)), '%');
+						console.log(colors.blue('[Mindstate]'), 'Bytes sent =', colors.cyan(filesize(bytesSentInt)));
+						if (self.tarBallSize) console.log(colors.blue('[Mindstate]'), 'Bytes transmitted =', colors.cyan(Math.ceil((bytesSentInt / self.tarBallSize) * 100)), '%');
 					}
 				}, function(err) {
 					if (mindstate.verbose > 2) console.log(colors.blue('[RSYNC]'), '2>', colors.red('ERROR', data.toString()));
