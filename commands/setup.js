@@ -70,10 +70,6 @@ module.exports = function(finish, settings) {
 			// }}}
 		})
 		.then(function(next) {
-			console.log('PLUGINS NOW PERSENT', _.pluck(mindstate.plugins, 'name'));
-			next();
-		})
-		.then(function(next) {
 			// server.address {{{
 			inquirer.prompt([
 				{

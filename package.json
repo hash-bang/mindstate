@@ -1,6 +1,6 @@
 {
   "name": "mindstate",
-  "version": "0.0.23",
+  "version": "0.0.24",
   "description": "Server backups with Node",
   "main": "app.js",
   "bin": {
@@ -45,9 +45,5 @@
     "temp": "^0.8.3",
     "untildify": "^2.1.0",
     "which": "^1.2.0"
-  },
-  "optionalDependencies": {
-    "mindstate-plugin-locations": "^1.0.0",
-    "mindstate-plugin-stats": "^1.0.1"
   }
 }
