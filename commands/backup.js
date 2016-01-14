@@ -2,12 +2,12 @@ var _ = require('lodash');
 var async = require('async-chainable');
 var childProcess = require('child_process');
 var colors = require('colors');
-var del = require('del');
 var fileEmitter = require('file-emitter');
 var filesize = require('filesize');
 var fs = require('fs');
 var tar = require('tar-fs');
 var temp = require('temp');
+var rimraf = require('rimraf');
 var rsync = require('rsync');
 
 module.exports = function(finish, settings) {
@@ -258,27 +258,40 @@ module.exports = function(finish, settings) {
 		// Cleanup + end {{{
 		.end(function(err) {
 			// Cleanup {{{
-			if (mindstate.tempDir) {
-				if (!settings.clean) {
-					console.log(colors.blue('[Cleanup]'), 'Skipping temp directory cleanup for', colors.cyan(mindstate.tempDir));
-				} else {
-					if (mindstate.verbose) console.log(colors.blue('[Cleanup]'), 'Delete temp directory', colors.cyan(mindstate.tempDir));
-					del.sync(mindstate.tempDir, {force: true});
-				}
-			}
+			async()
+				.parallel([
+					// Clean up temp directory {{{
+					function(next) {
+						if (!mindstate.tempDir) return next();
 
-			if (mindstate.tarPath) {
-				if (!settings.clean) {
-					console.log(colors.blue('[Cleanup]'), 'Skipping tarball cleanup for', colors.cyan(mindstate.tarPath));
-				} else {
-					if (mindstate.verbose) console.log(colors.blue('[Cleanup]'), 'Cleaning up tarball', colors.cyan(mindstate.tarPath));
-					del.sync(mindstate.tarPath, {force: true});
-				}
-			}
+						if (!settings.clean) {
+							console.log(colors.blue('[Cleanup]'), 'Skipping temp directory cleanup for', colors.cyan(mindstate.tempDir));
+							return next();
+						} else {
+							if (mindstate.verbose) console.log(colors.blue('[Cleanup]'), 'Delete temp directory', colors.cyan(mindstate.tempDir));
+							rimraf(mindstate.tempDir, {glob: false}, next);
+						}
+					},
+					// }}}
+					// Clean up tarball {{{
+					function(next) {
+						if (!mindstate.tarPath) return next();
+
+						if (!settings.clean) {
+							console.log(colors.blue('[Cleanup]'), 'Skipping tarball cleanup for', colors.cyan(mindstate.tarPath));
+							return next();
+						} else {
+							if (mindstate.verbose) console.log(colors.blue('[Cleanup]'), 'Cleaning up tarball', colors.cyan(mindstate.tarPath));
+							rimraf(mindstate.tarPath, {glob: false}, next);
+						}
+					},
+					// }}}
+				])
+				.end(function() {
+					if (!err) console.log(colors.green.bold('MindState backup completed!'));
+					finish(err);
+				});
 			// }}}
-
-			if (!err) console.log(colors.green.bold('MindState backup completed!'));
-			finish(err);
 		});
 		// }}}
 };
