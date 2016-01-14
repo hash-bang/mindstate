@@ -15,6 +15,7 @@ program
 	.option('-u, --update', 'Attempt to update the MindState client + plugins')
 	.option('-d, --delete [item]', 'Delete a remote mindstate. Can be used multiple times', function(i, v) { v.push(i); return v }, [])
 	.option('-v, --verbose', 'Be verbose. Specify multiple times for increasing verbosity', function(i, v) { return v + 1 }, 0)
+	.option('--debug', 'Turn on debugging. Disables global plugin loads')
 	.option('--plugin [plugin]', 'Specify the plugins to use manually. Can be used multiple times', function(i, v) { v.push(i); return v }, [])
 	.option('--no-color', 'Disable colors')
 	.option('--no-clean', 'Do not delete temp directory after backup')
@@ -25,6 +26,10 @@ program
 global.mindstate = require('./index');
 global.mindstate.program = program; // Glue CLI interface to main model
 global.mindstate.verbose = program.verbose;
+
+if (program.debug) {
+	global.mindstate.loadPluginsGlobal = false;
+}
 // }}}
 
 async()

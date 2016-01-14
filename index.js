@@ -23,6 +23,8 @@ var mindstate = {
 	functions: {},
 	plugins: [],
 	verbose: 0,
+	loadPluginsGlobal: true,
+	loadPluginsLocal: true,
 
 	// Core Functionality {{{
 	commands: {
@@ -42,17 +44,38 @@ mindstate.functions.loadPlugins = function(finish, filter) {
 	async()
 		.then('modules', function(next) {
 			moduleFinder({
-				global: true,
-				local: true,
+				global: mindstate.loadPluginsGlobal,
+				local: mindstate.loadPluginsLocal,
 				cwd: __dirname,
 			}).then(function(modules) {
-				next(null, modules);
+				next(null, modules.filter(function(mod) {
+					return _.startsWith(mod.pkg.name, 'mindstate-');
+				}));
 			}, next);
+		})
+		.then(function(next) {
+			// Check for duplicate mods {{{
+			var seen = {};
+			var dupeMods = [];
+
+			this.modules.forEach(function(mod) {
+				if (!seen[mod.pkg.name]) {
+					seen[mod.pkg.name] = true;
+				} else {
+					dupeMods.push(mod.pkg.name);
+				}
+			});
+
+			if (dupeMods.length) {
+				return next('Modules discovered twice: ' + dupeMods.join(', ') + '. Remove the duplicates or run with --debug to prevent global modules loading');
+			} else {
+				return next();
+			}
+			// }}}
 		})
 		.forEach('modules', function(next, module) {
 			if (module.pkg.name == 'mindstate') return next(); // Ignore this module
 			if (!module.pkg) return next('Module doesnt have package information: ' + module.toString());
-			if (!_.startsWith(module.pkg.name, 'mindstate-')) return next();
 
 			if (_.isFunction(filter)) { // Apply filters
 				var result = filter(module);
