@@ -146,8 +146,8 @@ mindstate.functions.baseConfig = function(finish) {
 		},
 		list: {
 			patternFilter: true,
-			pattern: '^(.*)-([0-9]{4})-([0-9]{2})-([0-9]{2})-([0-9]{2}):([0-9]{2}).tar.gz$',
-			patternServer: '^<<server>>-([0-9]{4})-([0-9]{2})-([0-9]{2})-([0-9]{2}):([0-9]{2}).tar.gz$',
+			pattern: '^(.*)-([0-9]{4})-([0-9]{2})-([0-9]{2})-([0-9]{2}):([0-9]{2}):([0-9]{2}).tar.gz$',
+			patternServer: '^<<server>>-([0-9]{4})-([0-9]{2})-([0-9]{2})-([0-9]{2}):([0-9]{2}):([0-9]{2}).tar.gz$',
 		},
 	});
 }
@@ -361,10 +361,15 @@ mindstate.functions.list = function(finish, client, options) {
 				}
 
 				files = files.filter(function(item) {
-					return (
+					var showFile = (
 						!mindstate.config.list.patternFilter ||
 						compiledPattern.test(item.name)
 					);
+
+					if (mindstate.verbose > 2 && !showFile) console.log(colors.blue('[SSH/list]'), 'Filtering out junk file listing', colors.cyan(item.name));
+
+
+					return showFile;
 				});
 				// }}}
 				next(null, files);
