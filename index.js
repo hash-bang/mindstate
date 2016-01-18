@@ -83,7 +83,9 @@ mindstate.functions.loadPlugins = function(finish, filter) {
 			}
 			try {
 				var loadedPlugin = require(module.pkg.name);
+				if (!_.isObject(loadedPlugin)) return next('Plugin ' + module.pkg.name + ' did not return an object');
 				if (!loadedPlugin.name) return next('Plugin ' + module.pkg.name + ' did not return a name');
+				loadedPlugin.pkgName = module.pkg.name;
 				mindstate.plugins.push(loadedPlugin);
 				next();
 			} catch (e) {

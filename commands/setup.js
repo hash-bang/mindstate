@@ -20,8 +20,6 @@ module.exports = function(finish, settings) {
 		})
 		.then(function(next) {
 			// Check plugin config {{{
-			if (mindstate.plugins.length) return next(); // At least one installed
-			console.log('No Mindstate plugins found');
 			inquirer.prompt([
 				{
 					type: 'checkbox',
@@ -49,23 +47,74 @@ module.exports = function(finish, settings) {
 							value: 'mindstate-plugin-stats',
 						},
 					],
-					default: ['mindstate-plugin-locations', 'mindstate-plugin-stats'],
+					default: function() {
+						// No plugins installed? Suggest some
+						if (!mindstate.plugins.length) {
+							console.log('No existing Mindstate plugins found');
+							return ['mindstate-plugin-locations', 'mindstate-plugin-stats'];
+						}
+
+						// Existing plugins - select them
+						return _.pluck(mindstate.plugins, 'pkgName');
+					}(),
 				},
 			], function(answers) {
 				if (!answers.plugins.length) return next(); // Do nothing as nothing is selected
 
-				npm.load({global: true}, function(err) {
-					if (err) return next(err);
-					if (mindstate.verbose) console.log(colors.blue('[NPM]'), 'install', answers.plugins.map(function(i) { return colors.cyan(i) }).join(' '));
+				async()
+					.then('npm', function(next) {
+						// Load NPM client {{{
+						if (mindstate.verbose > 2) console.log(colors.blue('[NPM]'), 'Load NPM');
+						npm.load({global: true}, next);
+						// }}}
+					})
+					.then(function(next) {
+						// Uninstall unneeded modules {{{
+						var uninstallNPMs = _.pluck(mindstate.plugins.filter(function(plugin) {
+							return !_.contains(answers.plugins, plugin.pkgName);
+						}), 'pkgName');
 
-					npm.commands.install(answers.plugins, function(err, data) {
-						if (err) return next(err);
-						if (mindstate.verbose > 2) console.log(colors.blue('[NPM]'), '>', data);
+						if (!uninstallNPMs.length) {
+							if (mindstate.verbose > 2) console.log(colors.blue('[NPM]'), 'nothing to uninstall');
+							return next();
+						}
 
-						// Reload plugins
-						mindstate.functions.loadPlugins(next);
-					});
-				});
+						if (mindstate.verbose) console.log(colors.blue('[NPM]'), 'uninstall', uninstallNPMs.map(function(i) { return colors.cyan(i) }).join(' '));
+
+						this.npm.commands.uninstall(uninstallNPMs, function(err, data) {
+							if (err) return next(err);
+							if (mindstate.verbose > 2) console.log(colors.blue('[NPM]'), '>', data);
+
+							// Reload plugins
+							mindstate.functions.loadPlugins(next);
+						});
+						// }}}
+					})
+					.then(function(next) {
+						// Install new modules {{{
+						var installNPMs = answers.plugins.filter(function(plugin) {
+							var exists = _.find(mindstate.plugins, {pkgName: plugin});
+							if (exists && mindstate.verbose) console.log(colors.blue('[NPM]'), colors.cyan(plugin), 'already installed');
+							return !exists;
+						});
+
+						if (!installNPMs.length) {
+							if (mindstate.verbose) console.log(colors.blue('[NPM]'), 'nothing to install');
+							return next();
+						}
+
+						if (mindstate.verbose) console.log(colors.blue('[NPM]'), 'install', installNPMs.map(function(i) { return colors.cyan(i) }).join(' '));
+
+						this.npm.commands.install(installNPMs, function(err, data) {
+							if (err) return next(err);
+							if (mindstate.verbose > 2) console.log(colors.blue('[NPM]'), '>', data);
+
+							// Reload plugins
+							mindstate.functions.loadPlugins(next);
+						});
+						// }}}
+					})
+					.end(next);
 			});
 			// }}}
 		})
