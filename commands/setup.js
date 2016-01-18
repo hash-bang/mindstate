@@ -42,7 +42,7 @@ module.exports = function(finish, settings) {
 						},
 						{
 							name: 'Postfix-Virtual',
-							value: 'mindstate-postfix-virtual',
+							value: 'mindstate-plugin-postfix-virtual',
 						},
 						{
 							name: 'Stats',
