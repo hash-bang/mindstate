@@ -35,9 +35,20 @@ if (program.debug) {
 async()
 	.then(function(next) {
 		if (mindstate.verbose > 2) console.log(colors.blue('[Mindstate]'), 'Loading INI config...');
-		mindstate.functions.loadConfig(next, function(err) {
+		mindstate.functions.loadConfig(function(err) {
 			if (err == 'No INI file to load') {
-				return next('No settings file found. Use `mindstate --setup` to set one up');
+				// Disallow certain operations if there is no INI file
+				if (
+					program.backup ||
+					program.list ||
+					program.delete.length
+				) {
+					return next('No settings file found. Use `mindstate --setup` to set one up');
+				} else {
+					if (mindstate.verbose > 2) console.log(colors.blue('[Mindstate]'), 'No INI file present but not needed for this operation anyway');
+					// There is no INI file but we (probably) dont need it for this operation anyway
+					return next();
+				}
 			} else {
 				return next(err);
 			}
