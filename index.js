@@ -82,7 +82,7 @@ mindstate.functions.loadPlugins = function(finish, filter) {
 				if (!result) return next();
 			}
 			try {
-				var loadedPlugin = require(module.pkg.name);
+				var loadedPlugin = require(module.path);
 				if (!_.isObject(loadedPlugin)) return next('Plugin ' + module.pkg.name + ' did not return an object');
 				if (!loadedPlugin.name) return next('Plugin ' + module.pkg.name + ' did not return a name');
 				loadedPlugin.pkgName = module.pkg.name;
