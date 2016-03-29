@@ -3,6 +3,7 @@ var async = require('async-chainable');
 var colors = require('colors');
 var homedir = require('homedir');
 var fs = require('fs');
+var fspath = require('path');
 var ini = require('ini');
 var moduleFinder = require('module-finder');
 var mustache = require('mustache');
@@ -82,7 +83,7 @@ mindstate.functions.loadPlugins = function(finish, filter) {
 				if (!result) return next();
 			}
 			try {
-				var loadedPlugin = require(module.path);
+				var loadedPlugin = require(fspath.dirname(module.path));
 				if (!_.isObject(loadedPlugin)) return next('Plugin ' + module.pkg.name + ' did not return an object');
 				if (!loadedPlugin.name) return next('Plugin ' + module.pkg.name + ' did not return a name');
 				loadedPlugin.pkgName = module.pkg.name;

@@ -26,7 +26,7 @@ module.exports = function(finish, settings) {
 		.then(function(next) {
 			temp.mkdir({prefix: 'mindstate-'}, function(err, dir) {
 				if (err) return next(err);
-				if (mindstate.verbose > 2) console.log('Using temp directory:', dir);
+				if (mindstate.verbose > 2) console.log(colors.blue('[Backup]'), 'Using temp directory:', dir);
 				mindstate.tempDir = dir;
 				next();
 			});
@@ -37,11 +37,12 @@ module.exports = function(finish, settings) {
 
 		// Execute each plugin {{{
 		.forEach(mindstate.plugins, function(nextPlugin, plugin) {
+			if (mindstate.verbose > 3) console.log(colors.blue('[Backup]'), 'Invoke Plugin', colors.cyan(plugin.name));
 			async()
 				.then(function(next) {
 					// Plugin sanity checks {{{
 					if (!_.isFunction(plugin.backup)) {
-						if (mindstate.verbose) console.log('Plugin', plugin.name, 'does not support backup');
+						if (mindstate.verbose > 1) console.log(colors.blue('[Backup]'), 'Plugin', plugin.name, 'does not support backup');
 						return next('SKIP');
 					}
 					next();
@@ -50,6 +51,7 @@ module.exports = function(finish, settings) {
 				.then('workspace', function(next) {
 					// Setup workspace {{{
 					var workspaceDir = mindstate.tempDir + '/' + plugin.name;
+					if (mindstate.verbose > 2) console.log(colors.blue('[Backup/' + plugin.name + ']'), 'Mkdir', workspaceDir);
 					fs.mkdir(workspaceDir, function(err) {
 						if (err) return next(err);
 						next(null, {
@@ -125,7 +127,7 @@ module.exports = function(finish, settings) {
 			tar
 				.pack(mindstate.tempDir, {
 					map: function(file) {
-						if (mindstate.verbose > 1) console.log(colors.blue('[Tar]'), colors.cyan(file.name));
+						if (mindstate.verbose > 1) console.log(colors.blue('[Tar]'), '+', file.name);
 						return file;
 					},
 				})
