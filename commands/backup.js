@@ -26,7 +26,7 @@ module.exports = function(finish, settings) {
 		.then(function(next) {
 			temp.mkdir({prefix: 'mindstate-'}, function(err, dir) {
 				if (err) return next(err);
-				if (mindstate.verbose > 2) console.log(colors.blue('[Backup]'), 'Using temp directory:', dir);
+				if (mindstate.verbose > 2) console.log(colors.blue('[Backup]'), 'Using temp directory', colors.cyan(dir));
 				mindstate.tempDir = dir;
 				next();
 			});
@@ -51,7 +51,7 @@ module.exports = function(finish, settings) {
 				.then('workspace', function(next) {
 					// Setup workspace {{{
 					var workspaceDir = mindstate.tempDir + '/' + plugin.name;
-					if (mindstate.verbose > 2) console.log(colors.blue('[Backup/' + plugin.name + ']'), 'Mkdir', workspaceDir);
+					if (mindstate.verbose > 2) console.log(colors.blue('[Backup/' + plugin.name + ']'), 'Mkdir', colors.cyan(workspaceDir));
 					fs.mkdir(workspaceDir, function(err) {
 						if (err) return next(err);
 						next(null, {
