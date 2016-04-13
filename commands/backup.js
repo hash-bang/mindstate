@@ -9,6 +9,7 @@ var tar = require('tar-fs');
 var temp = require('temp');
 var rimraf = require('rimraf');
 var rsync = require('rsync');
+var which = require('which');
 
 module.exports = function(finish, settings) {
 	async()
@@ -19,6 +20,15 @@ module.exports = function(finish, settings) {
 				upload: true,
 			});
 			next();
+		})
+		// }}}
+
+		// Check for binaries {{{
+		.forEach(['gzip', 'rsync'], function(next, bin) {
+			which('mysqldump', function(err) {
+				if (err) if (mindstate.verbose) return next('Required binary `' + bin + '` is not in PATH');
+				next();
+			});
 		})
 		// }}}
 
