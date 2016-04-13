@@ -43,7 +43,9 @@ module.exports = function(finish, settings) {
 		})
 		// }}}
 
+		// Load config {{{
 		.then(mindstate.functions.loadConfig)
+		// }}}
 
 		// Execute each plugin {{{
 		.forEach(mindstate.plugins, function(nextPlugin, plugin) {

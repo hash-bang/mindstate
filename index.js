@@ -54,8 +54,8 @@ mindstate.functions.loadPlugins = function(finish, filter) {
 				}));
 			}, next);
 		})
+		// Check for duplicate modules {{{
 		.then(function(next) {
-			// Check for duplicate mods {{{
 			var seen = {};
 			var dupeMods = [];
 
@@ -72,8 +72,8 @@ mindstate.functions.loadPlugins = function(finish, filter) {
 			} else {
 				return next();
 			}
-			// }}}
 		})
+		// }}}
 		.forEach('modules', function(next, module) {
 			if (module.pkg.name == 'mindstate') return next(); // Ignore this module
 			if (!module.pkg) return next('Module doesnt have package information: ' + module.toString());
@@ -128,6 +128,10 @@ mindstate.functions.decorateConfig = function(finish) {
 */
 mindstate.functions.baseConfig = function(finish) {
 	finish(null, {
+		client: {
+			// Minimum path contents when booting mindstate - this is to protect against minimal Cron environments which often strip out most of these
+			paths: ['/usr/local/sbin', '/usr/local/bin', '/usr/sbin', '/usr/bin', '/sbin', '/bin'],
+		},
 		server: {
 			address: 'backups@zapp.mfdc.biz:~/backups/',
 			filename: '{{os.hostname}}-{{date.year}}-{{date.month}}-{{date.day}}-{{date.hour}}:{{date.minute}}:{{date.second}}.tar.gz',
@@ -193,8 +197,8 @@ mindstate.functions.loadConfig = function(finish) {
 				next();
 			});
 		})
+		// Post decoration {{{
 		.then(function(next) {
-			// Post decoration {{{
 			// cliTable2 is really picky that padding-left / padding-right is an int {{{
 			mindstate.config.style.table.layout['padding-left'] = parseInt(mindstate.config.style.table.layout['padding-left']);
 			mindstate.config.style.table.layout['padding-right'] = parseInt(mindstate.config.style.table.layout['padding-right']);
@@ -207,12 +211,16 @@ mindstate.functions.loadConfig = function(finish) {
 			mindstate.config.server.username = sshParsed.auth;
 			// }}}
 			next();
-			// }}}
 		})
+		// }}}
 		.end(finish);
 };
 
 
+/**
+* Load the Mindstate INI file from wherever it is located and return its contents as a parsed object
+* @param {function} finish The callback to invoke on completion with an error and object payload
+*/
 mindstate.functions.loadIni = function(finish) {
 	async()
 		.set('iniLocations', [

@@ -22,17 +22,16 @@ program
 	.option('--no-upload', 'Skip the upload stage')
 	.parse(process.argv);
 
-// mindstate global object {{{
+// global.mindstate object {{{
 global.mindstate = require('./index');
 global.mindstate.program = program; // Glue CLI interface to main model
 global.mindstate.verbose = program.verbose;
 
-if (program.debug) {
-	global.mindstate.loadPluginsGlobal = false;
-}
+if (program.debug) global.mindstate.loadPluginsGlobal = false;
 // }}}
 
 async()
+	// Load config {{{
 	.then(function(next) {
 		if (mindstate.verbose > 2) console.log(colors.blue('[Mindstate]'), 'Loading INI config...');
 		mindstate.functions.loadConfig(function(err) {
@@ -54,6 +53,26 @@ async()
 			}
 		});
 	})
+	// }}}
+	// Enact client only options {{{
+	.then(function(next) {
+		// Apply process.env.PATH if some are missing {{{
+		if (_.has(mindstate.config, 'client.paths') && mindstate.config.client.paths.length) {
+			var hasPaths = process.env.PATH ? process.env.PATH.split(':') : [];
+			var addPaths = mindstate.config.client.paths.filter(function(wantPath) {
+				return !_.includes(hasPaths, wantPath);
+			});
+			if (addPaths.length) {
+				if (mindstate.verbose > 1) console.log(colors.blue('[Mindstate]'), 'Items missing from PATH: ' + addPaths.map(function(i) { return colors.cyan(i) }).join(', '));
+				process.env.PATH += ':' + addPaths.join(':');
+				if (mindstate.verbose > 1) console.log(colors.blue('[Mindstate]'), 'PATH modified to ' + colors.cyan(process.env.PATH));
+			}
+		}
+		// }}}
+		next();
+	})
+	// }}}
+	// Load plugins {{{
 	.then(function(next) {
 		if (mindstate.verbose > 2) console.log(colors.blue('[Mindstate]'), 'Loading plugins...');
 		mindstate.functions.loadPlugins(next, function(module) {
@@ -64,8 +83,9 @@ async()
 			});
 		});
 	})
+	// }}}
+	// Sanity checks {{{
 	.then(function(next) {
-		// Sanity checks {{{
 		if (
 			!mindstate.plugins.length && // No plugins AND
 			( // We are trying to...
@@ -76,8 +96,9 @@ async()
 		if (mindstate.verbose) console.log(colors.blue('[Mindstate]'), 'Using plugins:', mindstate.plugins.map(function(plugin) { return colors.cyan(plugin.name) }).join(', '));
 
 		next();
-		// }}}
 	})
+	// }}}
+	// Perform actions in a logical order (multiple actions can be performed so we need to figure out what is most optimal) {{{
 	.then(function(next) {
 		if (!program.update) return next();
 		if (mindstate.verbose > 2) console.log(colors.blue('[Mindstate]'), 'Performing operation:', colors.cyan('update'));
@@ -118,6 +139,8 @@ async()
 			mindstates: program.delete,
 		});
 	})
+	// }}}
+	// End {{{
 	.end(function(err) {
 		if (mindstate.verbose > 2) console.log(colors.blue('[Mindstate]'), 'Done');
 		if (err) {
@@ -126,3 +149,4 @@ async()
 		}
 		process.exit(0);
 	});
+	// }}}

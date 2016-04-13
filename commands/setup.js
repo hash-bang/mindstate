@@ -18,8 +18,8 @@ module.exports = function(finish, settings) {
 				next(null, baseConfig);
 			});
 		})
+		// Check plugin config {{{
 		.then(function(next) {
-			// Check plugin config {{{
 			inquirer.prompt([
 				{
 					type: 'checkbox',
@@ -116,10 +116,9 @@ module.exports = function(finish, settings) {
 					})
 					.end(next);
 			});
-			// }}}
 		})
+		// }}}
 		.then(function(next) {
-			// server.address {{{
 			inquirer.prompt([
 				{
 					type: 'list',
@@ -180,7 +179,6 @@ module.exports = function(finish, settings) {
 				});
 				next();
 			});
-			// }}}
 		})
 		.then(function(next) {
 			// Extract server connection string from what might be the full path
