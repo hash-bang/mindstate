@@ -1,6 +1,6 @@
 {
   "name": "mindstate",
-  "version": "0.0.29",
+  "version": "0.0.30",
   "description": "Server backups with Node",
   "main": "app.js",
   "bin": {

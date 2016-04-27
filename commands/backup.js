@@ -127,7 +127,6 @@ module.exports = function(finish, settings) {
 
 			var tarFile = fs.createWriteStream(mindstate.tarPath);
 			var gzip = childProcess.spawn('gzip', ['--rsyncable', '--stdout']);
-			gzip.stdout.pipe(tarFile);
 			tarFile.on('close', function(err) {
 				next();
 			});
@@ -135,6 +134,8 @@ module.exports = function(finish, settings) {
 				if (code == 0) return;
 				console.log(colors.blue('[Tar]'), colors.red('Gzip exited with code', code));
 			});
+
+			gzip.stdout.pipe(tarFile);
 
 			tar
 				.pack(mindstate.tempDir, {
