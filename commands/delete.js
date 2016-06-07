@@ -1,6 +1,6 @@
 var _ = require('lodash');
 var async = require('async-chainable');
-var colors = require('colors');
+var colors = require('chalk');
 
 module.exports = function(finish, settings) {
 	async()

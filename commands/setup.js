@@ -1,6 +1,6 @@
 var _ = require('lodash').mixin(require('lodash-deep'));
 var async = require('async-chainable');
-var colors = require('colors');
+var colors = require('chalk');
 var childProcess = require('child_process');
 var fs = require('fs');
 var homedir = require('homedir');

@@ -1,6 +1,6 @@
 var _ = require('lodash').mixin(require('lodash-deep'));
 var async = require('async-chainable');
-var colors = require('colors');
+var colors = require('chalk');
 var homedir = require('homedir');
 var fs = require('fs');
 var fspath = require('path');

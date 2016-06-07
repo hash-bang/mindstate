@@ -1,7 +1,7 @@
 var async = require('async-chainable');
 var availableVersions = require('available-versions');
 var cliTable = require('cli-table2');
-var colors = require('colors');
+var colors = require('chalk');
 var moduleFinder = require('module-finder');
 var npm = require('npm');
 

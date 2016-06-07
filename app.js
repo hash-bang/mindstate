@@ -2,7 +2,7 @@
 
 var _ = require('lodash');
 var async = require('async-chainable');
-var colors = require('colors');
+var colors = require('chalk');
 var program = require('commander');
 
 program
