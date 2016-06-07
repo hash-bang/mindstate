@@ -25,7 +25,7 @@ module.exports = function(finish, settings) {
 
 		// Check for binaries {{{
 		.forEach(['gzip', 'rsync'], function(next, bin) {
-			which('mysqldump', function(err) {
+			which(bin, function(err) {
 				if (err) if (mindstate.verbose) return next('Required binary `' + bin + '` is not in PATH');
 				next();
 			});
