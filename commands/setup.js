@@ -55,7 +55,7 @@ module.exports = function(finish, settings) {
 						}
 
 						// Existing plugins - select them
-						return _.pluck(mindstate.plugins, 'pkgName');
+						return _.map(mindstate.plugins, 'pkgName');
 					}(),
 				},
 			], function(answers) {
@@ -70,8 +70,8 @@ module.exports = function(finish, settings) {
 					})
 					.then(function(next) {
 						// Uninstall unneeded modules {{{
-						var uninstallNPMs = _.pluck(mindstate.plugins.filter(function(plugin) {
-							return !_.contains(answers.plugins, plugin.pkgName);
+						var uninstallNPMs = _.map(mindstate.plugins.filter(function(plugin) {
+							return !_.includes(answers.plugins, plugin.pkgName);
 						}), 'pkgName');
 
 						if (!uninstallNPMs.length) {
@@ -173,7 +173,7 @@ module.exports = function(finish, settings) {
 								return untildify(item);
 							})
 							.map(function(item) { // Remove final '/'
-								return _.trimRight(item, '/');
+								return _.trimEnd(item, '/');
 							})
 					},
 				});

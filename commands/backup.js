@@ -163,7 +163,7 @@ module.exports = function(finish, settings) {
 
 		// Prepare all file paths {{{
 		.then(function(next) {
-			this.destPrefix = _.trimRight(mindstate.config.server.address, '/') + '/';
+			this.destPrefix = _.trimEnd(mindstate.config.server.address, '/') + '/';
 			this.destFile = mindstate.config.server.filename;
 			next();
 		})

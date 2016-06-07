@@ -22,7 +22,7 @@ module.exports = function(finish, settings) {
 			// Filter by items we should delete {{{
 			this.list = this.list
 				.filter(function(item) {
-					return (_.contains(settings.mindstates, item.name));
+					return (_.includes(settings.mindstates, item.name));
 				});
 			// }}}
 			// FIXME: Would be nice if we could also specify the index or range here using something like [range-parser2](https://www.npmjs.com/package/range-parser2)

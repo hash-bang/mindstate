@@ -109,11 +109,11 @@ mindstate.functions.decorateConfig = function(finish) {
 		return mustache.render(value, {
 			date: {
 				year: (new Date).getFullYear(),
-				month: _.padLeft((new Date).getMonth() + 1, 2, '0'),
-				day: _.padLeft((new Date).getDate(), 2, '0'),
-				hour: _.padLeft((new Date).getHours(), 2, '0'),
-				minute: _.padLeft((new Date).getMinutes(), 2, '0'),
-				second: _.padLeft((new Date).getSeconds(), 2, '0'),
+				month: _.padStart((new Date).getMonth() + 1, 2, '0'),
+				day: _.padStart((new Date).getDate(), 2, '0'),
+				hour: _.padStart((new Date).getHours(), 2, '0'),
+				minute: _.padStart((new Date).getMinutes(), 2, '0'),
+				second: _.padStart((new Date).getSeconds(), 2, '0'),
 			},
 			os: {
 				hostname: os.hostname().toLowerCase(),
@@ -207,7 +207,7 @@ mindstate.functions.loadConfig = function(finish) {
 			var sshParsed = sshParse(mindstate.config.server.address);
 			if (!sshParsed) return next('Invalid server address');
 			mindstate.config.server.hostname = sshParsed.hostname;
-			mindstate.config.server.dir = _.trimRight(sshParsed.pathname, '/');
+			mindstate.config.server.dir = _.trimEnd(sshParsed.pathname, '/');
 			mindstate.config.server.username = sshParsed.auth;
 			// }}}
 			next();
