@@ -3,7 +3,6 @@ var async = require('async-chainable');
 var cliTable = require('cli-table2');
 var filesize = require('filesize');
 var fs = require('fs');
-var homedir = require('homedir');
 var moment = require('moment');
 
 module.exports = function(finish) {
@@ -15,8 +14,8 @@ module.exports = function(finish) {
 				sort: 'name',
 			});
 		})
+		// Render table {{{
 		.then(function(next) {
-			// Render table {{{
 			var table = new cliTable({
 				head: ['#', 'Name', 'Date', 'Size'],
 				chars: mindstate.config.style.table.chars,
@@ -34,7 +33,7 @@ module.exports = function(finish) {
 
 			console.log(table.length ? table.toString() : 'Nothing to display');
 			next();
-			// }}}
 		})
+		// }}}
 		.end(finish);
 };

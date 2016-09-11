@@ -2,6 +2,7 @@
 
 var _ = require('lodash');
 var async = require('async-chainable');
+var asyncFlush = require('async-chainable-flush');
 var colors = require('chalk');
 var program = require('commander');
 
@@ -31,6 +32,7 @@ if (program.debug) global.mindstate.loadPluginsGlobal = false;
 // }}}
 
 async()
+	.use(asyncFlush)
 	// Load config {{{
 	.then(function(next) {
 		if (mindstate.verbose > 2) console.log(colors.blue('[Mindstate]'), 'Loading INI config...');
@@ -141,6 +143,7 @@ async()
 	})
 	// }}}
 	// End {{{
+	.flush()
 	.end(function(err) {
 		if (mindstate.verbose > 2) console.log(colors.blue('[Mindstate]'), 'Done');
 		if (err) {
