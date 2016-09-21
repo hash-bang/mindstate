@@ -58,64 +58,68 @@ module.exports = function(finish, settings) {
 						return _.map(mindstate.plugins, 'pkgName');
 					}(),
 				},
-			], function(answers) {
-				if (!answers.plugins.length) return next(); // Do nothing as nothing is selected
+			])
+				.then(function(answers) {
+					console.log('GOT', answers);
+					if (!answers.plugins.length) return next(); // Do nothing as nothing is selected
 
-				async()
-					.then('npm', function(next) {
+					async()
 						// Load NPM client {{{
-						if (mindstate.verbose > 2) console.log(colors.blue('[NPM]'), 'Load NPM');
-						npm.load({global: true}, next);
+						.then('npm', function(next) {
+							if (mindstate.verbose > 2) console.log(colors.blue('[NPM]'), 'Load NPM');
+							npm.load({global: true}, next);
+						})
 						// }}}
-					})
-					.then(function(next) {
 						// Uninstall unneeded modules {{{
-						var uninstallNPMs = _.map(mindstate.plugins.filter(function(plugin) {
-							return !_.includes(answers.plugins, plugin.pkgName);
-						}), 'pkgName');
+						.then(function(next) {
+							var uninstallNPMs = _.map(mindstate.plugins.filter(function(plugin) {
+								return !_.includes(answers.plugins, plugin.pkgName);
+							}), 'pkgName');
 
-						if (!uninstallNPMs.length) {
-							if (mindstate.verbose > 2) console.log(colors.blue('[NPM]'), 'nothing to uninstall');
-							return next();
-						}
+							if (!uninstallNPMs.length) {
+								if (mindstate.verbose > 2) console.log(colors.blue('[NPM]'), 'nothing to uninstall');
+								return next();
+							}
 
-						if (mindstate.verbose) console.log(colors.blue('[NPM]'), 'uninstall', uninstallNPMs.map(function(i) { return colors.cyan(i) }).join(' '));
+							if (mindstate.verbose) console.log(colors.blue('[NPM]'), 'uninstall', uninstallNPMs.map(function(i) { return colors.cyan(i) }).join(' '));
 
-						this.npm.commands.uninstall(uninstallNPMs, function(err, data) {
-							if (err) return next(err);
-							if (mindstate.verbose > 2) console.log(colors.blue('[NPM]'), '>', data);
+							this.npm.commands.uninstall(uninstallNPMs, function(err, data) {
+								if (err) return next(err);
+								if (mindstate.verbose > 2) console.log(colors.blue('[NPM]'), '>', data);
 
-							// Reload plugins
-							mindstate.functions.loadPlugins(next);
-						});
+								// Reload plugins
+								mindstate.functions.loadPlugins(next);
+							});
+						})
 						// }}}
-					})
-					.then(function(next) {
 						// Install new modules {{{
-						var installNPMs = answers.plugins.filter(function(plugin) {
-							var exists = _.find(mindstate.plugins, {pkgName: plugin});
-							if (exists && mindstate.verbose) console.log(colors.blue('[NPM]'), colors.cyan(plugin), 'already installed');
-							return !exists;
-						});
+						.then(function(next) {
+							var installNPMs = answers.plugins.filter(function(plugin) {
+								var exists = _.find(mindstate.plugins, {pkgName: plugin});
+								if (exists && mindstate.verbose) console.log(colors.blue('[NPM]'), colors.cyan(plugin), 'already installed');
+								return !exists;
+							});
 
-						if (!installNPMs.length) {
-							if (mindstate.verbose) console.log(colors.blue('[NPM]'), 'nothing to install');
-							return next();
-						}
+							if (!installNPMs.length) {
+								if (mindstate.verbose) console.log(colors.blue('[NPM]'), 'nothing to install');
+								return next();
+							}
 
-						if (mindstate.verbose) console.log(colors.blue('[NPM]'), 'install', installNPMs.map(function(i) { return colors.cyan(i) }).join(' '));
+							if (mindstate.verbose) console.log(colors.blue('[NPM]'), 'install', installNPMs.map(function(i) { return colors.cyan(i) }).join(' '));
 
-						this.npm.commands.install(installNPMs, function(err, data) {
-							if (err) return next(err);
-							if (mindstate.verbose > 2) console.log(colors.blue('[NPM]'), '>', data);
+							this.npm.commands.install(installNPMs, function(err, data) {
+								if (err) return next(err);
+								if (mindstate.verbose > 2) console.log(colors.blue('[NPM]'), '>', data);
 
-							// Reload plugins
-							mindstate.functions.loadPlugins(next);
-						});
+								// Reload plugins
+								mindstate.functions.loadPlugins(next);
+							});
+						})
 						// }}}
-					})
-					.end(next);
-			});
+						// End {{{
+						.end(next);
+						// }}}
+				});
 		})
 		// }}}
 		.then(function(next) {
@@ -157,28 +161,29 @@ module.exports = function(finish, settings) {
 					message: 'Enter any additional directories to backup seperated with commas',
 					default: _.get(mindstate.config, 'locations.dir', []).join(', '),
 				},
-			], function(answers) {
-				iniPath = answers.iniLocation;
+			])
+				.then(function(answers) {
+					iniPath = answers.iniLocation;
 
-				_.merge(mindstate.config, {
-					server: {
-						address: answers.serverAddress,
-						filename: answers.filename,
-					},
-					locations: {
-						enabled: (!! answers.extraDirs),
-						dir: (answers.extraDirs ? answers.extraDirs : '')
-							.split(/\s*,\s*/)
-							.map(function(item) { // Replace ~ => homedir
-								return untildify(item);
-							})
-							.map(function(item) { // Remove final '/'
-								return _.trimEnd(item, '/');
-							})
-					},
+					_.merge(mindstate.config, {
+						server: {
+							address: answers.serverAddress,
+							filename: answers.filename,
+						},
+						locations: {
+							enabled: (!! answers.extraDirs),
+							dir: (answers.extraDirs ? answers.extraDirs : '')
+								.split(/\s*,\s*/)
+								.map(function(item) { // Replace ~ => homedir
+									return untildify(item);
+								})
+								.map(function(item) { // Remove final '/'
+									return _.trimEnd(item, '/');
+								})
+						},
+					});
+					next();
 				});
-				next();
-			});
 		})
 		.then(function(next) {
 			// Extract server connection string from what might be the full path
