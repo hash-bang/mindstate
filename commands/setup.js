@@ -60,7 +60,6 @@ module.exports = function(finish, settings) {
 				},
 			])
 				.then(function(answers) {
-					console.log('GOT', answers);
 					if (!answers.plugins.length) return next(); // Do nothing as nothing is selected
 
 					async()
