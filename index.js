@@ -332,6 +332,7 @@ mindstate.functions.list = function(finish, client, options) {
 	var settings = _.defaults(options || {}, {
 		sort: 'name',
 		server: false,
+		meta: false,
 	});
 
 	async()
@@ -366,8 +367,10 @@ mindstate.functions.list = function(finish, client, options) {
 
 				// Filter files by mindstate.config.list.patternFilter {{{
 				var compiledPattern;
-				if (settings.server) { // Filter by specific server
+				if (settings.server === true) { // Filter by this server
 					compiledPattern = new RegExp(mustache.render('{{=<< >>=}}' + mindstate.config.list.patternServer, {server: os.hostname().toLowerCase()}));
+				} else if (settings.server) { // Filter by a server
+					compiledPattern = new RegExp(mustache.render('{{=<< >>=}}' + mindstate.config.list.patternServer, {server: settings.server}));
 				} else {
 					compiledPattern = new RegExp(mindstate.config.list.pattern);
 				}
@@ -384,6 +387,21 @@ mindstate.functions.list = function(finish, client, options) {
 					return showFile;
 				});
 				// }}}
+
+				// Extract meta data {{{
+				var compiledPattern = new RegExp(mindstate.config.list.pattern);
+				files = files.map(function(file) {
+					// FIXME: This assumes that the capture groups are exactly in order:
+					// server, year, month, day, hour, minute, second
+					var bits = compiledPattern.exec(file.name);
+					file.meta = {
+						server: bits[1],
+						date: new Date(bits[2], bits[3], bits[4], bits[5], bits[6], bits[7]),
+					};
+					return file;
+				});
+				// }}}
+
 				next(null, files);
 			});
 		})
