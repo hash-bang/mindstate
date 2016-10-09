@@ -51,8 +51,6 @@ module.exports = function(finish, settings) {
 		// }}}
 		// Calculate whether any fall within range {{{
 		.then('status', function(next) {
-			if (!mindstate.verbose) return next();
-
 			if (this.latest.meta.date <= this.dateRanges.warning) {
 				next(null, 'OK');
 			} else if (this.latest.meta.date <= this.dateRanges.critical) {
@@ -66,6 +64,7 @@ module.exports = function(finish, settings) {
 		.end(function(err) {
 			if (err) return finish(err);
 			console.log('Mindstate ' + this.status + ' - ' + moment(this.latest.meta.date).format('YYYY-MM-DD HH:mm:ss') + ' size: ' + filesize(this.latest.size));
+			finish();
 		});
 		// }}}
 };
