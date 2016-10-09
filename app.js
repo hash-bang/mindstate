@@ -145,11 +145,7 @@ async()
 	.then(function(next) {
 		if (!program.nagios) return next();
 		if (mindstate.verbose > 2) console.log(colors.blue('[Mindstate]'), 'Performing operation:', colors.cyan('nagios'));
-		try {
-			mindstate.commands.nagios(next, {});
-		} catch (e) {
-			return next(e);
-		}
+		mindstate.commands.nagios(next, {});
 	})
 	// }}}
 	// End {{{
