@@ -18,6 +18,7 @@ program
 	.option('-v, --verbose', 'Be verbose. Specify multiple times for increasing verbosity', function(i, v) { return v + 1 }, 0)
 	.option('--debug', 'Turn on debugging. Disables global plugin loads')
 	.option('--plugin [plugin]', 'Specify the plugins to use manually. Can be used multiple times', function(i, v) { v.push(i); return v }, [])
+	.option('--nagios', 'Nagios output mode (specify server expression)')
 	.option('--no-color', 'Disable colors')
 	.option('--no-clean', 'Do not delete temp directory after backup')
 	.option('--no-upload', 'Skip the upload stage')
@@ -140,6 +141,15 @@ async()
 		mindstate.commands.delete(next, {
 			mindstates: program.delete,
 		});
+	})
+	.then(function(next) {
+		if (!program.nagios) return next();
+		if (mindstate.verbose > 2) console.log(colors.blue('[Mindstate]'), 'Performing operation:', colors.cyan('nagios'));
+		try {
+			mindstate.commands.nagios(next, {});
+		} catch (e) {
+			return next(e);
+		}
 	})
 	// }}}
 	// End {{{

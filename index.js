@@ -34,6 +34,7 @@ var mindstate = {
 		dump: require('./commands/dump'),
 		dumpComputed: require('./commands/dumpComputed'),
 		list: require('./commands/list'),
+		nagios: require('./commands/nagios'),
 		setup: require('./commands/setup'),
 		update: require('./commands/update'),
 	},
