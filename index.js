@@ -101,7 +101,7 @@ mindstate.functions.loadPlugins = function(finish, filter) {
 
 /**
 * Return the config object after Mustashifying all values
-* @param function finish(err, config) Callback to fire when completed
+* @param {function} finish(err, config) Callback to fire when completed
 */
 mindstate.functions.decorateConfig = function(finish) {
 	finish(null, _.deepMapValues(mindstate.config, function(value, path) {
@@ -249,7 +249,7 @@ mindstate.functions.loadIni = function(finish) {
 
 /**
 * Connect to an SSH server and return an SFTP client
-* @param function finish(err, client) Callback to invoke on completion
+* @param {function} finish(err, client) Callback to invoke on completion
 */
 mindstate.functions.connect = function(finish) {
 	async()
@@ -321,11 +321,12 @@ mindstate.functions.connect = function(finish) {
 
 /**
 * Use an active connection to get a list of files from the server
-* @param function finish(err, client) Callback to invoke on completion
-* @param object client Active SFTP client
-* @param object options Additional options to pass
-* @param boolean options.sort What file aspect (same as stat) to sort by (e.g. name, size, date, owner, group)
-* @param boolean options.server Limit output to only this server
+* @param {function} finish(err, client) Callback to invoke on completion
+* @param {Object} client Active SFTP client
+* @param {Object} [options] Additional options to pass
+* @param {boolean} [options.sort] What file aspect (same as stat) to sort by (e.g. name, size, date, owner, group)
+* @param {boolean|string} [options.server=false] Limit output to only this server or the specified server
+* @param {boolean} [meta=false] Try to extract the server name + date from the filename
 */
 mindstate.functions.list = function(finish, client, options) {
 	var settings = _.defaults(options || {}, {
@@ -395,9 +396,9 @@ mindstate.functions.list = function(finish, client, options) {
 /**
 * Translate a shorthand path into a real one using the servers environment variables
 * This really just translates paths like '~/somewhere' into the full path using the HOME variable available from the remote server
-* @param function finish(err, path) Callback to invoke on completion
-* @param object client Active SFTP client
-* @param string path The path to evaluate
+* @param {function} finish(err, path) Callback to invoke on completion
+* @param {Object} client Active SFTP client
+* @param {string} path The path to evaluate
 */
 mindstate.functions.realpath = function(finish, client, path) {
 	// User HOME + dir style (e.g. '~/dir') - use HOME + USER + path
