@@ -36,12 +36,24 @@ var mindstate = {
 		list: require('./commands/list'),
 		nagios: require('./commands/nagios'),
 		setup: require('./commands/setup'),
+		tidy: require('./commands/tidy'),
 		update: require('./commands/update'),
 	},
 	// }}}
 };
 
 // Global functions {{{
+mindstate.functions.getHomeDir = function() {
+	var hDir = homedir();
+	if (hDir) return hDir;
+
+	// Can't find home dir - use fall backs
+	if (process.env.USER) return '/home/' + process.env.USER;
+
+	// No fall backs worked - return null
+	return null;
+};
+
 mindstate.functions.loadPlugins = function(finish, filter) {
 	async()
 		.then('modules', function(next) {
@@ -226,7 +238,7 @@ mindstate.functions.loadIni = function(finish) {
 	async()
 		.set('iniLocations', [
 			'/etc/mindstate',
-			(homedir() ? homedir() + '/.mindstate' : null),
+			(mindstate.functions.getHomeDir() ? mindstate.functions.getHomeDir() + '/.mindstate' : null),
 			'./mindstate.config',
 		])
 		.then('iniFile', function(next) {
@@ -258,7 +270,7 @@ mindstate.functions.connect = function(finish) {
 			if (mindstate.config.server.password) return next(); // Use plaintext password instead
 
 			async()
-				.set('keyPath', homedir() + '/.ssh/id_rsa')
+				.set('keyPath', mindstate.functions.getHomeDir() + '/.ssh/id_rsa')
 				.then('keyStat', function(next) {
 					fs.stat(this.keyPath, next);
 				})
