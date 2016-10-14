@@ -38,7 +38,7 @@ module.exports = function(finish, settings) {
 		.then('list', function(next) {
 			mindstate.functions.list(next, this.client, {
 				server: mindstate.program.args[0],
-				sort: 'date',
+				sort: 'meta.date',
 				meta: true,
 			});
 		})

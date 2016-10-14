@@ -338,7 +338,7 @@ mindstate.functions.connect = function(finish) {
 * @param {function} finish(err, client) Callback to invoke on completion
 * @param {Object} client Active SFTP client
 * @param {Object} [options] Additional options to pass
-* @param {boolean} [options.sort] What file aspect (same as stat) to sort by (e.g. name, size, date, owner, group)
+* @param {boolean} [options.sort] What file aspect (same as stat) to sort by (e.g. name, size, date, owner, group, meta.date). Field accepts dotted notation
 * @param {boolean|string} [options.server=false] Limit output to only this server or the specified server
 * @param {boolean} [meta=false] Try to extract the server name + date from the filename
 */
@@ -368,9 +368,12 @@ mindstate.functions.list = function(finish, client, options) {
 				// Apply sorting (optional) {{{
 				if (settings.sort) {
 					files.sort(function(a, b) {
-						if (a[settings.sort] > b[settings.sort]) {
+						var valA = _.get(a, settings.sort);
+						var valB = _.get(b, settings.sort);
+
+						if (valA > valB) {
 							return 1;
-						} else if (a[settings.sort] < b[settings.sort]) {
+						} else if (valA < valB) {
 							return -1;
 						} else {
 							return 0;
