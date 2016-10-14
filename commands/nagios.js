@@ -62,9 +62,18 @@ module.exports = function(finish, settings) {
 		// }}}
 		// End {{{
 		.end(function(err) {
-			if (err) return finish(err);
+			if (err) {
+				console.log('Mindstate ERROR - ' + err.toString());
+				process.exit(3);
+			}
+
 			console.log('Mindstate ' + this.status + ' - ' + moment(this.latest.meta.date).format('YYYY-MM-DD HH:mm:ss') + ' size: ' + filesize(this.latest.size));
-			finish();
+			switch (this.status) {
+				case 'OK': process.exit(0);
+				case 'WARN': process.exit(1);
+				case 'CRIT': process.exit(2);
+				default: process.exit(3);
+			}
 		});
 		// }}}
 };
