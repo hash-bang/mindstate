@@ -51,12 +51,12 @@ module.exports = function(finish, settings) {
 		// }}}
 		// Calculate whether any fall within range {{{
 		.then('status', function(next) {
-			if (this.latest.meta.date <= this.dateRanges.warning) {
-				next(null, 'OK');
-			} else if (this.latest.meta.date <= this.dateRanges.critical) {
+			if (this.latest.meta.date <= this.dateRanges.critical) {
+				next(null, 'CRIT');
+			} else if (this.latest.meta.date <= this.dateRanges.warning) {
 				next(null, 'WARN');
 			} else {
-				next(null, 'CRIT');
+				next(null, 'OK');
 			}
 		})
 		// }}}
