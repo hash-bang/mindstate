@@ -246,6 +246,7 @@ module.exports = function(finish, settings) {
 				.compress()
 				.source(mindstate.tarPath)
 				.destination(this.destPrefix + this.destFile)
+				.shell('ssh -i ' + mindstate.config.server.keyPath)
 				.output(function(data) {
 					if (!mindstate.verbose) return;
 
