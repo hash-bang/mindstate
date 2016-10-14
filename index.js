@@ -146,6 +146,7 @@ mindstate.functions.baseConfig = function(finish) {
 			paths: ['/usr/local/sbin', '/usr/local/bin', '/usr/sbin', '/usr/bin', '/sbin', '/bin'],
 		},
 		server: {
+			keyPath: mindstate.functions.getHomeDir() + '/.ssh/id_rsa',
 			address: 'backups@zapp.mfdc.biz:~/backups/',
 			filename: '{{os.hostname}}-{{date.year}}-{{date.month}}-{{date.day}}-{{date.hour}}:{{date.minute}}:{{date.second}}.tar.gz',
 			// password: String, // Plaintext password during SSH - do not do this. Use private keys instead
@@ -270,7 +271,7 @@ mindstate.functions.connect = function(finish) {
 			if (mindstate.config.server.password) return next(); // Use plaintext password instead
 
 			async()
-				.set('keyPath', mindstate.functions.getHomeDir() + '/.ssh/id_rsa')
+				.set('keyPath', mindstate.config.server.keyPath)
 				.then('keyStat', function(next) {
 					fs.stat(this.keyPath, next);
 				})
