@@ -279,8 +279,8 @@ mindstate.functions.connect = function(finish) {
 					fs.readFile(this.keyPath, next);
 				})
 				.end(function(err) {
-					if (err) return next(null, undefined); // Key not found or failed to read
-					if (mindstate.verbose) console.log(colors.blue('[SSH]'), 'Using local private key');
+					if (err) return next(err); // Key not found or failed to read
+					if (mindstate.verbose) console.log(colors.blue('[SSH]'), 'Using local private key from "' + mindstate.config.server.keyPath + '"');
 					next(null, this.keyContent);
 				});
 		})
