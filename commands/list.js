@@ -11,6 +11,7 @@ module.exports = function(finish) {
 		.then('client', mindstate.functions.connect)
 		.then('list', function(next) {
 			mindstate.functions.list(next, this.client, {
+				meta: true,
 				sort: 'name',
 			});
 		})
@@ -26,7 +27,7 @@ module.exports = function(finish) {
 				table.push([
 					(offset + 1),
 					file.name,
-					moment(file.date).format(mindstate.config.style.date),
+					moment(file.meta.date).format(mindstate.config.style.date),
 					filesize(file.size),
 				]);
 			});
