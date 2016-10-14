@@ -159,7 +159,7 @@ mindstate.functions.baseConfig = function(finish) {
 			dir: [],
 		},
 		style: {
-			date: 'YYYY-DD-MM HH:mm',
+			date: 'YYYY-MM-DD HH:mm',
 			table: {
 				chars: {'mid': '', 'left-mid': '', 'mid-mid': '', 'right-mid': ''}, // See https://www.npmjs.com/package/cli-table2#custom-styles
 				layout: {'padding-left': 1, 'padding-right': 1, head: ['blue'], border: ['grey'], compact: false},
