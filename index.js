@@ -413,7 +413,7 @@ mindstate.functions.list = function(finish, client, options) {
 					var bits = compiledPattern.exec(file.name);
 					file.meta = {
 						server: bits[1],
-						date: new Date(bits[2], bits[3], bits[4], bits[5], bits[6], bits[7]),
+						date: new Date(bits[2], bits[3] - 1, bits[4], bits[5], bits[6], bits[7]),
 					};
 					return file;
 				});
