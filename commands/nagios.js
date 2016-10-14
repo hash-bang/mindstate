@@ -46,7 +46,7 @@ module.exports = function(finish, settings) {
 		// Calculate latest backup {{{
 		.then('latest', function(next) {
 			if (!this.list.length) return next('No matching backups found');
-			next(null, this.list[0]);
+			next(null, _.last(this.list));
 		})
 		// }}}
 		// Calculate whether any fall within range {{{
