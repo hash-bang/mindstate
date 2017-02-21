@@ -189,7 +189,7 @@ module.exports = function(finish, settings) {
 					if (!this.list.length) return next('SKIP');
 					if (latest.name == this.destFile) {
 						console.log(colors.blue('[Delta]'), 'Delta file would be same name as current timestamp, skipping delta copy stage');
-						console.log(colors.blue('[Delta]'), 'This should only occur if you are attempting extremely frequent backups without a second / microsecond marker in the output filename');
+						console.log(colors.blue('[Delta]'), 'This should only occur if there isnt a recent backup OR you are attempting extremely frequent backups without a second / microsecond marker in the output filename');
 						return next('SKIP');
 					}
 					next(null, latest);
