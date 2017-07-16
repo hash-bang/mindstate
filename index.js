@@ -365,23 +365,6 @@ mindstate.functions.list = function(finish, client, options) {
 				});
 				// }}}
 
-				// Apply sorting (optional) {{{
-				if (settings.sort) {
-					files.sort(function(a, b) {
-						var valA = _.get(a, settings.sort);
-						var valB = _.get(b, settings.sort);
-
-						if (valA > valB) {
-							return 1;
-						} else if (valA < valB) {
-							return -1;
-						} else {
-							return 0;
-						}
-					});
-				}
-				// }}}
-
 				// Filter files by mindstate.config.list.patternFilter {{{
 				var compiledPattern;
 				if (settings.server === true) { // Filter by this server
@@ -417,6 +400,10 @@ mindstate.functions.list = function(finish, client, options) {
 					};
 					return file;
 				});
+				// }}}
+
+				// Apply sorting (optional) {{{
+				if (settings.sort) files = _.sortBy(files, settings.sort);
 				// }}}
 
 				next(null, files);
