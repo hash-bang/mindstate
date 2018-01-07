@@ -4,10 +4,9 @@ var childProcess = require('child_process');
 var colors = require('chalk');
 var fileEmitter = require('file-emitter');
 var filesize = require('filesize');
-var fs = require('fs');
+var fs = require('fs-extra');
 var tar = require('tar-fs');
 var temp = require('temp');
-var rimraf = require('rimraf');
 var rsync = require('rsync');
 var which = require('which');
 
@@ -285,7 +284,7 @@ module.exports = function(finish, settings) {
 							return next();
 						} else {
 							if (mindstate.verbose) console.log(colors.blue('[Cleanup]'), 'Delete temp directory', colors.cyan(mindstate.tempDir));
-							rimraf(mindstate.tempDir, {glob: false}, next);
+							fs.remove(mindstate.tempDir, next);
 						}
 					},
 					// }}}
@@ -298,7 +297,7 @@ module.exports = function(finish, settings) {
 							return next();
 						} else {
 							if (mindstate.verbose) console.log(colors.blue('[Cleanup]'), 'Cleaning up tarball', colors.cyan(mindstate.tarPath));
-							rimraf(mindstate.tarPath, {glob: false}, next);
+							fs.remove(mindstate.tarPath, next);
 						}
 					},
 					// }}}
