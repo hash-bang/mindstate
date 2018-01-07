@@ -66,7 +66,7 @@ module.exports = function(finish, settings) {
 						// Load NPM client {{{
 						.then('npm', function(next) {
 							if (mindstate.verbose > 2) console.log(colors.blue('[NPM]'), 'Load NPM');
-							npm.load({global: true}, next);
+							npm.load({global: true, progress: false}, next);
 						})
 						// }}}
 						// Uninstall unneeded modules {{{
