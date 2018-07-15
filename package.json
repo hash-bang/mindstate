@@ -23,7 +23,7 @@
     "async-chainable-flush": "^1.0.0",
     "available-versions": "^0.13.0",
     "chalk": "^2.3.0",
-    "cli-table2": "^0.2.0",
+    "cli-table3": "^0.5.0",
     "commander": "^2.12.2",
     "file-emitter": "^2.0.0",
     "filesize": "^3.5.11",
